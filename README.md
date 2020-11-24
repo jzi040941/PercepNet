@@ -7,3 +7,5 @@ https://www.researchgate.net/publication/343568932_A_Perceptually-Motivated_Appr
 https://github.com/wil-j-wil/py_bank
 
 https://github.com/dgaspari/pyrapt
+
+https://github.com/xiph/rnnoise
