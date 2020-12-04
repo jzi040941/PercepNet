@@ -23,9 +23,9 @@
 #define PITCH_FRAME_SIZE 960
 
 #define FRAME_LOOKAHEAD 5 //round(PITCH_MAX_PERIOD*COMB_M/WINDOW_SIZE + 0.5)
-//#define PITCH_BUF_SIZE (PITCH_MAX_PERIOD+PITCH_FRAME_SIZE)
+#define PITCH_BUF_SIZE (PITCH_MAX_PERIOD+PITCH_FRAME_SIZE)
 #define FRAME_LOOKAHEAD_SIZE (FRAME_LOOKAHEAD*FRAME_SIZE)
-#define PITCH_BUF_SIZE (FRAME_LOOKAHEAD*2*FRAME_SIZE+PITCH_FRAME_SIZE)
+#define COMB_BUF_SIZE (FRAME_LOOKAHEAD*2*FRAME_SIZE+PITCH_FRAME_SIZE)
 #define SQUARE(x) ((x)*(x))
 
 #define NB_BANDS 22
@@ -59,6 +59,7 @@ struct DenoiseState {
   int memid;
   float synthesis_mem[FRAME_SIZE];
   float pitch_buf[PITCH_BUF_SIZE];
+  float comb_buf[COMB_BUF_SIZE];
   float pitch_enh_buf[PITCH_BUF_SIZE];
   float last_gain;
   int last_period;
@@ -283,12 +284,19 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   float *(pre[1]);
   float tmp[NB_BANDS];
   float follow, logMax;
+  
+  RNN_MOVE(st->comb_buf, &st->comb_buf[FRAME_SIZE], COMB_BUF_SIZE-FRAME_SIZE);
+  RNN_COPY(&st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE], in, FRAME_SIZE);
+
   RNN_MOVE(st->pitch_buf, &st->pitch_buf[FRAME_SIZE], PITCH_BUF_SIZE-FRAME_SIZE);
-  RNN_COPY(&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE], in, FRAME_SIZE);
+  RNN_COPY(&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE], &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
 
-  //RNN_COPY(in,st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE*7], FRAME_SIZE);
+  float tmp_pitch_buf[960];
+  RNN_COPY(tmp_pitch_buf, &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
+  //float incombn[FRAME_SIZE];
+  //RNN_COPY(incombn,&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
 
-  frame_analysis(st, X, Ex, in);
+  frame_analysis(st, X, Ex, &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*4]); 
   
   pre[0] = &st->pitch_buf[0];
   pitch_downsample(pre, pitch_buf, PITCH_BUF_SIZE, 1);
@@ -304,10 +312,15 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   for (i=0;i<WINDOW_SIZE;i++)
       p[i]=0;
 
+  float tmp_p[WINDOW_SIZE];
+  for (i =0; i<WINDOW_SIZE; i++){
+    tmp_p[i] = st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(COMB_M)-WINDOW_SIZE+i];
+  }
+  printf("hello");
   for (k=-COMB_M;k<COMB_M+1; k++){
     for (i=0;i<WINDOW_SIZE;i++)
-      p[i] += st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE*7-pitch_index*k+i]*common.comb_hann_window[k+COMB_M];
-  }
+      p[i] += st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(COMB_M)-WINDOW_SIZE-pitch_index*k+i]*common.comb_hann_window[k+COMB_M];
+  } 
   apply_window(p);
   forward_transform(P, p);
   compute_band_energy(Ep, P);
