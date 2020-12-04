@@ -291,8 +291,6 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   RNN_MOVE(st->pitch_buf, &st->pitch_buf[FRAME_SIZE], PITCH_BUF_SIZE-FRAME_SIZE);
   RNN_COPY(&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE], &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
 
-  float tmp_pitch_buf[960];
-  RNN_COPY(tmp_pitch_buf, &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
   //float incombn[FRAME_SIZE];
   //RNN_COPY(incombn,&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
 
@@ -312,11 +310,6 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   for (i=0;i<WINDOW_SIZE;i++)
       p[i]=0;
 
-  float tmp_p[WINDOW_SIZE];
-  for (i =0; i<WINDOW_SIZE; i++){
-    tmp_p[i] = st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(COMB_M)-WINDOW_SIZE+i];
-  }
-  printf("hello");
   for (k=-COMB_M;k<COMB_M+1; k++){
     for (i=0;i<WINDOW_SIZE;i++)
       p[i] += st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(COMB_M)-WINDOW_SIZE-pitch_index*k+i]*common.comb_hann_window[k+COMB_M];
