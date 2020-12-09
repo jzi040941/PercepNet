@@ -123,14 +123,15 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
 void interp_band_gain(float *g, const float *bandE) {
   int i;
   memset(g, 0, FREQ_SIZE);
-  for (i=0;i<NB_BANDS-1;i++)
+  for (i=0;i<NB_BANDS;i++)
   {
     int j;
     int band_size;
-    band_size = (eband5ms[i+1]-eband5ms[i])<<FRAME_SIZE_SHIFT;
-    for (j=0;j<band_size;j++) {
-      float frac = (float)j/band_size;
-      g[(eband5ms[i]<<FRAME_SIZE_SHIFT) + j] = (1-frac)*bandE[i] + frac*bandE[i+1];
+    //band_size = (eband5ms[i+1]-eband5ms[i])<<FRAME_SIZE_SHIFT;
+    int low_nfft_idx = erb_band->filters[i].first.first;
+    int high_nfft_idx = erb_band->filters[i].first.second;
+    for(j=low_nfft_idx; j<high_nfft_idx; j++){
+      g[j] += erb_band->filters[i].second[j-low_nfft_idx]*bandE[i];
     }
   }
 }

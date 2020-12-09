@@ -71,7 +71,7 @@ class ERBBand{
               if(h_k-l_k < 100)
                   h_k=l_k + 100;
               l_nfftind = (int)(l_k/freqRangePerBin) +1;
-              h_nfftind = (int)(h_k/freqRangePerBin) -1;
+              h_nfftind = (int)(h_k/freqRangePerBin);
               avg = (freq2erb(l_k) + freq2erb(h_k))/2;
               rnge = freq2erb(h_k) - freq2erb(l_k);
               std::pair<std::pair<int,int>,std::vector<float>> kthfilter = {{l_nfftind,h_nfftind+1},{}};
