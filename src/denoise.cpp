@@ -322,6 +322,12 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   forward_transform(P, p);
   compute_band_energy(Ep, P);
   compute_band_corr(Exp, X, P);
+
+  for (i=0;i<NB_BANDS;i++) {
+    E += Ex[i];
+  }
+
+  return E<0.1;
 }
 
 void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const float *Ep,
