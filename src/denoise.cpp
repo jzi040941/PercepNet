@@ -52,6 +52,7 @@ typedef struct {
   float half_window[FRAME_SIZE];
   float dct_table[NB_BANDS*NB_BANDS];
   float comb_hann_window[COMB_M*2+1];
+  float power_noise_attenuation;
 } CommonState;
 
 struct DenoiseState {
@@ -159,7 +160,11 @@ static void check_init() {
   for (i=1;i<COMB_M*2+2; i++){
     common.comb_hann_window[i-1] /= temp_sum;
   }
-  
+  common.power_noise_attenuation = 0;
+  for (i=1;i<COMB_M*2+2; i++){
+    common.power_noise_attenuation += common.comb_hann_window[i-1]*common.comb_hann_window[i-1];
+  }
+
   common.init = 1;
 }
 
@@ -375,7 +380,7 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   float Exp[NB_BANDS];
   float features[NB_FEATURES];
   float g[NB_BANDS];
-  float gf[FREQ_SIZE]={1};
+  float gf[FREQ_SIZE]={1};  
   float vad_prob = 0;
   int silence;
   static const float a_hp[2] = {-1.99599, 0.99600};
