@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -340,8 +342,9 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
   int i;
   //float r[NB_BANDS];
   float rf[FREQ_SIZE] = {0};
+  /*
   for (i=0;i<NB_BANDS;i++) {
-    /*
+    
 #if 0
     if (Exp[i]>g[i]) r[i] = 1;
     else r[i] = Exp[i]*(1-g[i])/(.001 + g[i]*(1-Exp[i]));
@@ -384,14 +387,17 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   float g[NB_BANDS];
   float gf[FREQ_SIZE]={1};  
   float vad_prob = 0;
+  float r[NB_BANDS];
   int silence;
+  
   static const float a_hp[2] = {-1.99599, 0.99600};
   static const float b_hp[2] = {-2, 1};
   biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
   silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
 
+  //r will be estimated by dnn
   if(!silence){
-  pitch_filter(X, P, Ex, Ep, Exp, g);
+  pitch_filter(X, P, Ex, Ep, Exp, g, r);
   }
   frame_synthesis(st, out, X);
   return 0;
@@ -430,7 +436,7 @@ static void rand_resp(float *a, float *b) {
 int lowpass = FREQ_SIZE;
 int band_lp = NB_BANDS;
 
-int main(int argc, char **argv) {
+int train(int argc, char **argv) {
   int i;
   int count=0;
   static const float a_hp[2] = {-1.99599, 0.99600};

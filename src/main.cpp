@@ -4,9 +4,13 @@
 #define FRAME_SIZE 480
 
 //using namespace std;
-
+#define TRAINING 1
 int main(int argc, char **argv)
 {
+  if(TRAINING){
+    train(argc, argv);
+    return 0;
+  }
   int i;
   int first = 1;
   float x[FRAME_SIZE];

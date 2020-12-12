@@ -62,4 +62,5 @@ RNNOISE_EXPORT RNNModel *rnnoise_model_from_file(FILE *f);
 
 RNNOISE_EXPORT void rnnoise_model_free(RNNModel *model);
 
+int train(int argc, char **argv);
 #endif
