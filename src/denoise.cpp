@@ -403,9 +403,9 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   return 0;
 };
 
-void estimate_phat_corr(CommonState *st, float *Eyp, float *Ephatp){
+void estimate_phat_corr(CommonState st, float *Eyp, float *Ephatp){
   for(int i=0; i<NB_BANDS; i++){
-    Ephatp[i] = Eyp[i]/sqrt((1-st->power_noise_attenuation)*Eyp[i] + st->power_noise_attenuation);
+    Ephatp[i] = Eyp[i]/sqrt((1-st.power_noise_attenuation)*Eyp[i] + st.power_noise_attenuation);
   }
 }
 
@@ -476,11 +476,14 @@ int train(int argc, char **argv) {
   }
   while (1) {
     kiss_fft_cpx X[FREQ_SIZE], Y[FREQ_SIZE], N[FREQ_SIZE], P[WINDOW_SIZE];
+    kiss_fft_cpx Phat[WINDOW_SIZE];/*only for build*/
     float Ex[NB_BANDS], Ey[NB_BANDS], En[NB_BANDS], Ep[NB_BANDS];
-    float Exp[NB_BANDS];
+    float Ephat[NB_BANDS], Ephaty[NB_BANDS]; /*only for build*/
+    float Exp[NB_BANDS], Eyp[NB_BANDS], Ephatp[NB_BANDS];
     float Ln[NB_BANDS];
     float features[NB_FEATURES];
     float g[NB_BANDS];
+    float r[NB_BANDS];
     short tmp[FRAME_SIZE];
     float vad=0;
     float E=0;
@@ -530,11 +533,16 @@ int train(int argc, char **argv) {
     biquad(n, mem_hp_n, n, b_hp, a_hp, FRAME_SIZE);
     biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
     for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
-    frame_analysis(st, Y, Ey, x);
-    frame_analysis(noise_state, N, En, n);
+    //frame_analysis(st, , Ey, x);
+    //frame_analysis(noise_state, N, En, n);
     for (i=0;i<NB_BANDS;i++) Ln[i] = log10(1e-2+En[i]);
-    int silence = compute_frame_features(noisy, X, P, Ex, Ep, Exp, features, xn);
+    int silence = compute_frame_features(noisy, Y, Phat/*not use*/, Ey, Ephat/*not use*/, Ephaty/*not use*/, features, xn);
+    compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
+    compute_band_corr(Eyp, Y, P);
+    estimate_phat_corr(common, Eyp, Ephatp);
+    filter_strength_calc(Exp, Eyp, Ephatp, r);
   }
   fclose(f1);
   fclose(f2);
+  return 0;
 }
