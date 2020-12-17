@@ -7,7 +7,7 @@ https://www.researchgate.net/publication/343568932_A_Perceptually-Motivated_Appr
 
 - [X] pitch estimation
 - [X] Comb filter
-- [ ] ERBBand c++ implementation
+- [X] ERBBand c++ implementation(need fix)
 - [ ] Data Creater(c++) for pytorch
 - [ ] DNNModel pytorch
 - [ ] DNNModel c++ implementation
