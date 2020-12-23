@@ -535,14 +535,26 @@ int train(int argc, char **argv) {
     for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
     //frame_analysis(st, , Ey, x);
     //frame_analysis(noise_state, N, En, n);
-    for (i=0;i<NB_BANDS;i++) Ln[i] = log10(1e-2+En[i]);
-    int silence = compute_frame_features(noisy, Y, Phat/*not use*/, Ey, Ephat/*not use*/, Ephaty/*not use*/, features, xn);
+    //for (i=0;i<NB_BANDS;i++) Ln[i] = log10(1e-2+En[i]);
+    int silence = compute_frame_features(noisy, Y, Phat/*not use*/, Ey, Ephat/*not use*/, Ephaty, features, xn);
     compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
     compute_band_corr(Eyp, Y, P);
-    estimate_phat_corr(common, Eyp, Ephatp);
-    filter_strength_calc(Exp, Eyp, Ephatp, r);
+    estimate_phat_corr(common, Ephaty, Ephatp);
+    filter_strength_calc(Exp, EphatY, Ephatp, r);
+    
+    
+    //fwrite(features, sizeof(float), NB_FEATURES, stdout);
+    fwrite(Y, sizeof(float), NB_BANDS, stdout);//Y(l+M)
+    fwrite(Ephaty, sizeof(float), NB_BANDS, stdout);//pitch coherence
+    //TODO
+    //pitch
+    //pitch correlation
+    fwrite(r, sizeof(float), NB_BANDS, stdout);//filtering strength
+    //fwrite(g, sizeof(float), NB_BANDS, stdout);//gain
+    //fwrite(&vad, sizeof(float), 1, stdout);
+    
   }
   fclose(f1);
   fclose(f2);
   return 0;
-}
+}//
