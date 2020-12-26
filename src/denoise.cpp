@@ -55,6 +55,7 @@ typedef struct {
   float dct_table[NB_BANDS*NB_BANDS];
   float comb_hann_window[COMB_M*2+1];
   float power_noise_attenuation;
+  float n0;/*noise-masking-tone threshold*/
 } CommonState;
 
 struct DenoiseState {
@@ -166,6 +167,7 @@ static void check_init() {
   for (i=1;i<COMB_M*2+2; i++){
     common.power_noise_attenuation += common.comb_hann_window[i-1]*common.comb_hann_window[i-1];
   }
+  common.n0 = 0.03;
 
   common.init = 1;
 }
@@ -413,11 +415,27 @@ void filter_strength_calc(float *Exp, float *Eyp, float *Ephatp, float* r){
   float alpha;
   float a;
   float b;
-  for(int i=0; i<NB_BANDS; i++){
+  for(int i=0; i<NB_BANDS; ++i){
     a = Ephatp[i]*Ephatp[i] - Exp[i]*Exp[i];
     b = Ephatp[i]*Eyp[i]*(1-Exp[i]*Exp[i]);
     alpha = (sqrt(b*b + a *(Exp[i]*Exp[i]-Eyp[i]*Eyp[i]))-b)/a;
     r[i] = alpha/(1+alpha);
+  }
+}
+
+void calc_ideal_gain(float *X, float *Y, float* g){
+  for(int i=0; i<NB_BANDS; ++i){
+    g[i] = X[i]/Y[i];
+  }
+}
+
+void adjust_gain_strength_by_condition(CommonState st, float *Ephatp, float *Exp, float* g, float* r){
+  float g_att;
+  for(int i=0; i<NB_BANDS; ++i){
+    if(Ephatp[i]<Exp[i])
+      g_att = sqrt((1+st.n0-Exp[i]*Exp[i])/(1+st.n0-Ephatp[i]*Ephatp[i]));
+      r[i] = 1;
+      g[i] *= g_att;
   }
 }
 
@@ -538,19 +556,23 @@ int train(int argc, char **argv) {
     //for (i=0;i<NB_BANDS;i++) Ln[i] = log10(1e-2+En[i]);
     int silence = compute_frame_features(noisy, Y, Phat/*not use*/, Ey, Ephat/*not use*/, Ephaty, features, xn);
     compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
+    calc_ideal_gain(Ex, Ey, g);
     compute_band_corr(Eyp, Y, P);
     estimate_phat_corr(common, Ephaty, Ephatp);
-    filter_strength_calc(Exp, EphatY, Ephatp, r);
+    filter_strength_calc(Exp, Ephaty, Ephatp, r);
+    adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     
     //fwrite(features, sizeof(float), NB_FEATURES, stdout);
     fwrite(Y, sizeof(float), NB_BANDS, stdout);//Y(l+M)
     fwrite(Ephaty, sizeof(float), NB_BANDS, stdout);//pitch coherence
+    
+    float T = noisy->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
+    fwrite(&T, sizeof(float), 1, stdout);//pitch
     //TODO
-    //pitch
     //pitch correlation
     fwrite(r, sizeof(float), NB_BANDS, stdout);//filtering strength
-    //fwrite(g, sizeof(float), NB_BANDS, stdout);//gain
+    fwrite(g, sizeof(float), NB_BANDS, stdout);//gain
     //fwrite(&vad, sizeof(float), 1, stdout);
     
   }
