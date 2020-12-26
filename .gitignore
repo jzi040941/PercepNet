@@ -138,3 +138,6 @@ dmypy.json
 cython_debug/
 
 .vscode/
+
+*.exe
+src/*.pcm
