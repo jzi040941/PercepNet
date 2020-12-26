@@ -281,7 +281,7 @@ void celt_pitch_xcorr(const opus_val16 *_x, const opus_val16 *_y,
 }
 
 void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
-                  int len, int max_pitch, int *pitch)
+                  int len, int max_pitch, int *pitch, float *pitch_corr)
 {
    int i, j;
    int lag;
@@ -382,6 +382,7 @@ void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
       offset = 0;
    }
    *pitch = 2*best_pitch[0]-offset;
+   *pitch_corr = xcorr[best_pitch[0]];
 }
 
 #ifdef FIXED_POINT

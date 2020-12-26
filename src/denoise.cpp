@@ -68,6 +68,7 @@ struct DenoiseState {
   float pitch_enh_buf[PITCH_BUF_SIZE];
   float last_gain;
   int last_period;
+  float pitch_corr;
   float mem_hp_x[2];
   //float lastg[NB_BANDS];
   //RNNState rnn;
@@ -293,6 +294,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   float p[WINDOW_SIZE];
   float pitch_buf[PITCH_BUF_SIZE>>1];
   int pitch_index;
+  float pitch_corr;
   float gain;
   float *(pre[1]);
   float tmp[NB_BANDS];
@@ -312,13 +314,14 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   pre[0] = &st->pitch_buf[0];
   pitch_downsample(pre, pitch_buf, PITCH_BUF_SIZE, 1);
   pitch_search(pitch_buf+(PITCH_MAX_PERIOD>>1), pitch_buf, PITCH_FRAME_SIZE,
-               PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD, &pitch_index);
+               PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD, &pitch_index, &pitch_corr);
   pitch_index = PITCH_MAX_PERIOD-pitch_index;
 
   gain = remove_doubling(pitch_buf, PITCH_MAX_PERIOD, PITCH_MIN_PERIOD,
           PITCH_FRAME_SIZE, &pitch_index, st->last_period, st->last_gain);
   st->last_period = pitch_index;
   st->last_gain = gain;
+  st->last_pitch_corr = pitch_corr;
 
   for (i=0;i<WINDOW_SIZE;i++)
       p[i]=0;
@@ -568,9 +571,10 @@ int train(int argc, char **argv) {
     fwrite(Ephaty, sizeof(float), NB_BANDS, stdout);//pitch coherence
     
     float T = noisy->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
+    float pitchcorr = noisy->pitch_corr;
     fwrite(&T, sizeof(float), 1, stdout);//pitch
-    //TODO
-    //pitch correlation
+    fwrite(&pitchcorr, sizeof(float), 1, stdout);//pitch correlation
+    
     fwrite(r, sizeof(float), NB_BANDS, stdout);//filtering strength
     fwrite(g, sizeof(float), NB_BANDS, stdout);//gain
     //fwrite(&vad, sizeof(float), 1, stdout);
