@@ -19,3 +19,5 @@ https://github.com/wil-j-wil/py_bank
 https://github.com/dgaspari/pyrapt
 
 https://github.com/xiph/rnnoise
+
+https://github.com/smallmuou/wavutils
