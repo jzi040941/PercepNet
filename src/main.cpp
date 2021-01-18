@@ -5,6 +5,7 @@
 
 //using namespace std;
 #define TRAINING 1
+#define TEST 1
 int main(int argc, char **argv)
 {
   if(TRAINING){

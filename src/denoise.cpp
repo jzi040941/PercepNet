@@ -120,7 +120,7 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
   }
   for (i=0;i<NB_BANDS;i++)
   {
-    bandE[i] = sum[i];
+    bandE[i] = fmax(0,sum[i]);
   }
  
 }
@@ -321,7 +321,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
           PITCH_FRAME_SIZE, &pitch_index, st->last_period, st->last_gain);
   st->last_period = pitch_index;
   st->last_gain = gain;
-  st->last_pitch_corr = pitch_corr;
+  st->pitch_corr = pitch_corr;
 
   for (i=0;i<WINDOW_SIZE;i++)
       p[i]=0;
@@ -334,6 +334,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   forward_transform(P, p);
   compute_band_energy(Ep, P);
   compute_band_corr(Exp, X, P);
+  for (i=0;i<NB_BANDS;i++) Exp[i] = Exp[i]/sqrt(.001+Ex[i]*Ep[i]);
 
   for (i=0;i<NB_BANDS;i++) {
     E += Ex[i];
@@ -410,7 +411,7 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
 
 void estimate_phat_corr(CommonState st, float *Eyp, float *Ephatp){
   for(int i=0; i<NB_BANDS; i++){
-    Ephatp[i] = Eyp[i]/sqrt((1-st.power_noise_attenuation)*Eyp[i] + st.power_noise_attenuation);
+    Ephatp[i] = Eyp[i]/sqrt((1-pow(st.power_noise_attenuation,2))*Eyp[i] + pow(st.power_noise_attenuation,2));
   }
 }
 
@@ -428,7 +429,7 @@ void filter_strength_calc(float *Exp, float *Eyp, float *Ephatp, float* r){
 
 void calc_ideal_gain(float *X, float *Y, float* g){
   for(int i=0; i<NB_BANDS; ++i){
-    g[i] = X[i]/Y[i];
+    g[i] = X[i]/(.0001+Y[i]);
   }
 }
 
@@ -476,7 +477,7 @@ int train(int argc, char **argv) {
   int vad_cnt=0;
   int gain_change_count=0;
   float speech_gain = 1, noise_gain = 1;
-  FILE *f1, *f2;
+  FILE *f1, *f2, *f3;
   int maxCount;
   DenoiseState *st;
   DenoiseState *noise_state;
@@ -484,12 +485,13 @@ int train(int argc, char **argv) {
   st = rnnoise_create(NULL);
   noise_state = rnnoise_create(NULL);
   noisy = rnnoise_create(NULL);
-  if (argc!=4) {
-    fprintf(stderr, "usage: %s <speech> <noise> <count>\n", argv[0]);
+  if (argc!=5) {
+    fprintf(stderr, "usage: %s <speech> <noise> <count> <output>\n", argv[0]);
     return 1;
   }
   f1 = fopen(argv[1], "r");
   f2 = fopen(argv[2], "r");
+  f3 = fopen(argv[4], "w");
   maxCount = atoi(argv[3]);
   for(i=0;i<150;i++) {
     short tmp[FRAME_SIZE];
@@ -509,7 +511,7 @@ int train(int argc, char **argv) {
     float vad=0;
     float E=0;
     if (count==maxCount) break;
-    if ((count%1000)==0) fprintf(stderr, "%d\r", count);
+    //if ((count%1000)==0) fprintf(stderr, "%d\r", count);
     if (++gain_change_count > 2821) {
       speech_gain = pow(10., (-40+(rand()%60))/20.);
       noise_gain = pow(10., (-30+(rand()%50))/20.);
@@ -560,27 +562,30 @@ int train(int argc, char **argv) {
     int silence = compute_frame_features(noisy, Y, Phat/*not use*/, Ey, Ephat/*not use*/, Ephaty, features, xn);
     compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
     calc_ideal_gain(Ex, Ey, g);
-    compute_band_corr(Eyp, Y, P);
+    //compute_band_corr(Eyp, Y, P);
+    //for (i=0;i<NB_BANDS;i++) Eyp[i] = Eyp[i]/sqrt(.001+Ey[i]*Ep[i]);
     estimate_phat_corr(common, Ephaty, Ephatp);
     filter_strength_calc(Exp, Ephaty, Ephatp, r);
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     
     //fwrite(features, sizeof(float), NB_FEATURES, stdout);
-    fwrite(Y, sizeof(float), NB_BANDS, stdout);//Y(l+M)
-    fwrite(Ephaty, sizeof(float), NB_BANDS, stdout);//pitch coherence
+    fwrite(Ey, sizeof(float), NB_BANDS, f3);//Y(l+M)
+    fwrite(Ephaty, sizeof(float), NB_BANDS, f3);//pitch coherence
     
     float T = noisy->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
     float pitchcorr = noisy->pitch_corr;
-    fwrite(&T, sizeof(float), 1, stdout);//pitch
-    fwrite(&pitchcorr, sizeof(float), 1, stdout);//pitch correlation
+    fwrite(&T, sizeof(float), 1, f3);//pitch
+    fwrite(&pitchcorr, sizeof(float), 1, f3);//pitch correlation
     
-    fwrite(r, sizeof(float), NB_BANDS, stdout);//filtering strength
-    fwrite(g, sizeof(float), NB_BANDS, stdout);//gain
+    fwrite(r, sizeof(float), NB_BANDS, f3);//filtering strength
+    fwrite(g, sizeof(float), NB_BANDS, f3);//gain
     //fwrite(&vad, sizeof(float), 1, stdout);
-    
+
+    count++;
   }
   fclose(f1);
   fclose(f2);
+  fclose(f3);
   return 0;
 }//
