@@ -40,12 +40,12 @@ class ERBBand{
     public:
       std::vector<std::pair<std::pair<int,int>,std::vector<float>>> filters;
       ERBBand(int window_size, int N, float low_lim, float high_lim){
-          cutoffs.assign(N,0);
+          cutoffs.assign(N+2,0);
           int i;
           erb_low = freq2erb(low_lim);
           erb_high = freq2erb(high_lim);
           erb_lims = linspace(erb_low, erb_high, N+2);
-          for(i=0; i<N; i++){
+          for(i=0; i<N+2; i++){
               cutoffs[i] = erb2freq(erb_lims[i]);
           }
           bandN = N;
