@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
-
+import numpy as np
 
 class h5Dataset(Dataset):
 
@@ -66,6 +66,23 @@ def test():
     out = model(x)
     print(out.shape)
 
+class CustomLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(CustomLoss, self).__init__()
+
+    def forward(self, outputs, targets):
+        gamma = 0.5
+        C4 = 10
+
+        rb_hat = output[:34]
+        gb_hat = output[34:68]
+        rb = target[:34]
+        gb = target[34:68]
+
+        return ((gb**gamma - gb_hat**gamma)**2).sum() + C4*((gb**gamma - gb_hat**gamma)**4).sum() +
+        (((1-rb)**gamma-(1-rb_hat)**gamma)**2).sum()
+def criterion(output, target):
+    
 def train():
     dataset = h5Dataset("training.h5")
     trainset_ratio = 0.8 # 1 - validation set ration
@@ -76,20 +93,23 @@ def train():
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
     validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
 
+    model = PercepNet()
+    optimizer = optim.Adam(model.parameter(), lr=0.0001)
+    criterion = CustomLoss()
     num_epochs = 2
     for epoch in range(num_epochs):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
         # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
+        inputs, targets = data
 
         # zero the parameter gradients
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
 
