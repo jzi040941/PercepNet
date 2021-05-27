@@ -81,8 +81,7 @@ class CustomLoss(nn.Module):
 
         return ((gb**gamma - gb_hat**gamma)**2).sum() + C4*((gb**gamma - gb_hat**gamma)**4).sum() +
         (((1-rb)**gamma-(1-rb_hat)**gamma)**2).sum()
-def criterion(output, target):
-    
+
 def train():
     dataset = h5Dataset("training.h5")
     trainset_ratio = 0.8 # 1 - validation set ration
@@ -120,5 +119,5 @@ def train():
                   (epoch + 1, i + 1, running_loss / 2000))
             running_loss = 0.0
 
-print('Finished Training')
+    print('Finished Training')
 test()
