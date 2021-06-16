@@ -309,7 +309,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   //float incombn[FRAME_SIZE];
   //RNN_COPY(incombn,&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE*4], FRAME_SIZE);
 
-  frame_analysis(st, X, Ex, &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*4]); 
+  frame_analysis(st, X, Ex, &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(FRAME_LOOKAHEAD+1)]); 
   
   pre[0] = &st->pitch_buf[0];
   pitch_downsample(pre, pitch_buf, PITCH_BUF_SIZE, 1);
@@ -328,7 +328,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
 
   for (k=-COMB_M;k<COMB_M+1; k++){
     for (i=0;i<WINDOW_SIZE;i++)
-      p[i] += st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(COMB_M)-WINDOW_SIZE-pitch_index*k+i]*common.comb_hann_window[k+COMB_M];
+      p[i] += st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(FRAME_LOOKAHEAD)-WINDOW_SIZE-pitch_index*k+i]*common.comb_hann_window[k+COMB_M];
   } 
   apply_window(p);
   forward_transform(P, p);
