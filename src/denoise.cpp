@@ -489,9 +489,9 @@ int train(int argc, char **argv) {
     fprintf(stderr, "usage: %s <speech> <noise> <count> <output>\n", argv[0]);
     return 1;
   }
-  f1 = fopen(argv[1], "r");
-  f2 = fopen(argv[2], "r");
-  f3 = fopen(argv[4], "w");
+  f1 = fopen(argv[1], "rb");
+  f2 = fopen(argv[2], "rb");
+  f3 = fopen(argv[4], "wb");
   maxCount = atoi(argv[3]);
   for(i=0;i<150;i++) {
     short tmp[FRAME_SIZE];
