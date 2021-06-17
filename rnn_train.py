@@ -46,7 +46,6 @@ class PercepNet(nn.Module):
         self.gru_rb = nn.GRU(512, 128, 1, batch_first=True)
         self.fc_gb = nn.Sequential(nn.Linear(512, 34), nn.Sigmoid())
         self.fc_rb = nn.Sequential(nn.Linear(128, 34), nn.Sigmoid())
-        self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.fc(x)
