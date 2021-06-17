@@ -30,6 +30,7 @@
 
 #define WEIGHTS_SCALE (1.f/256)
 #define MAX_NEURONS 128
+#define MAX_CONV_INPUTS 512
 
 #define ACTIVATION_LINEAR  0
 #define ACTIVATION_SIGMOID 1
@@ -37,6 +38,9 @@
 #define ACTIVATION_RELU    3
 #define ACTIVATION_SOFTMAX 4
 
+#define INPUT_SIZE 70
+#define CONV_DIM 512
+#define CONVOUT_BUF_SIZE CONV_DIM*3
 typedef struct {
   const float *bias;
   const float *input_weights;

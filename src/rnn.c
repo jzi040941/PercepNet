@@ -38,9 +38,8 @@
 #include "nnet_data.h"
 #include <stdio.h>
 
-#define INPUT_SIZE 70
-#define CONV_DIM 512
-void compute_rnn(RNNState *rnn, float *gains, float *vad, const float *input) {
+
+void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *input) {
   int i;
   float dense_out[MAX_NEURONS];
   float first_conv1d_out[CONV_DIM];
@@ -50,6 +49,23 @@ void compute_rnn(RNNState *rnn, float *gains, float *vad, const float *input) {
   compute_dense(rnn->model->input_dense, dense_out, input);
   compute_conv1d(rnn->model->first_conv1d, first_conv1d_out/*512*/, rnn->first_conv1d_state, dense_out);
   compute_conv1d(rnn->model->second_conv1d, second_conv1d_out/*512*/, rnn->second_conv1d_state, first_conv1d_out);
+  
+  //align 3 conv data
+  RNN_MOVE(rnn->convout_buf, &rnn->convout_buf[CONV_DIM], CONVOUT_BUF_SIZE-CONV_DIM);
+  RNN_COPY(&rnn->convout_buf[CONVOUT_BUF_SIZE-CONV_DIM], rnn->second_conv1d_state, CONV_DIM);
+  //T-3 convout input for gru1
+  compute_gru(rnn->model->gru1, rnn->gru1_state, rnn->convout_buf);
+  compute_gru(rnn->model->gru2, rnn->gru2_state, rnn->gru1_state);
+  compute_gru(rnn->model->gru3, rnn->gru3_state, rnn->gru2_state);
+  
+  //for temporary input for gb_gru and rb_gru is gru3_state
+  //but it might be need concat convout_buf through gru1,2,3_state
+  compute_gru(rnn->model->gb_gru, rnn->gb_gru_state, rnn->gru3_state);
+  compute_gru(rnn->model->rb_gru, rnn->rb_gru_state, rnn->gru3_state);
+  
+  compute_dense(rnn->model->gb_output, gains, rnn->gb_gru_state);
+  compute_dense(rnn->model->rb_output, strengths, rnn->rb_gru_state);
+  /*
   compute_gru(rnn->model->vad_gru, rnn->vad_gru_state, dense_out);
   compute_dense(rnn->model->vad_output, vad, rnn->vad_gru_state);
   for (i=0;i<rnn->model->input_dense_size;i++) noise_input[i] = dense_out[i];
@@ -62,4 +78,5 @@ void compute_rnn(RNNState *rnn, float *gains, float *vad, const float *input) {
   for (i=0;i<INPUT_SIZE;i++) denoise_input[i+rnn->model->vad_gru_size+rnn->model->noise_gru_size] = input[i];
   compute_gru(rnn->model->denoise_gru, rnn->denoise_gru_state, denoise_input);
   compute_dense(rnn->model->denoise_output, gains, rnn->denoise_gru_state);
+  */
 }

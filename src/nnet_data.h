@@ -28,8 +28,13 @@ typedef struct RNNModel {
 typedef struct RNNState {
   const RNNModel *model;
   float *first_conv1d_state;
-  float *noise_gru_state;
-  float *denoise_gru_state;
+  float *second_conv1d_state;
+  float *gru1_state;
+  float *gru2_state;
+  float *gru3_state;
+  float *gb_gru_state;
+  float *rb_gru_state;
+  float convout_buf[CONV_DIM*3];
 } RNNState;
 
 

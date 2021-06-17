@@ -117,42 +117,16 @@ void compute_dense(const DenseLayer *layer, float *output, const float *input)
    compute_activation(output, output, N, layer->activation);
 }
 
-void compute_mdense(const MDenseLayer *layer, float *output, const float *input)
-{
-   int i, c;
-   int N, M, C;
-   int stride;
-   float tmp[MAX_MDENSE_TMP];
-   celt_assert(input != output);
-   M = layer->nb_inputs;
-   N = layer->nb_neurons;
-   C = layer->nb_channels;
-   celt_assert(N*C <= MAX_MDENSE_TMP);
-   stride = N*C;
-   for (i=0;i<N*C;i++)
-      tmp[i] = layer->bias[i];
-   sgemv_accum(tmp, layer->input_weights, N*C, M, stride, input);
-   compute_activation(tmp, tmp, N*C, ACTIVATION_TANH);
-   for (i=0;i<N;i++)
-      output[i] = 0;
-   for (c=0;c<C;c++)
-   {
-      for (i=0;i<N;i++)
-         output[i] += tmp[c*N + i]*layer->factor[c*N + i];
-   }
-   compute_activation(output, output, N, layer->activation);
-}
-
 void compute_gru(const GRULayer *gru, float *state, const float *input)
 {
    int i;
    int N, M;
    int stride;
-   float tmp[MAX_RNN_NEURONS];
-   float z[MAX_RNN_NEURONS];
-   float r[MAX_RNN_NEURONS];
-   float h[MAX_RNN_NEURONS];
-   celt_assert(gru->nb_neurons <= MAX_RNN_NEURONS);
+   float tmp[MAX_NEURONS];
+   float z[MAX_NEURONS];
+   float r[MAX_NEURONS];
+   float h[MAX_NEURONS];
+   celt_assert(gru->nb_neurons <= MAX_NEURONS);
    celt_assert(input != state);
    M = gru->nb_inputs;
    N = gru->nb_neurons;
@@ -205,115 +179,6 @@ void compute_gru(const GRULayer *gru, float *state, const float *input)
       state[i] = h[i];
 }
 
-void compute_gru2(const GRULayer *gru, float *state, const float *input)
-{
-   int i;
-   int N, M;
-   int stride;
-   float zrh[3*MAX_RNN_NEURONS];
-   float recur[3*MAX_RNN_NEURONS];
-   float *z;
-   float *r;
-   float *h;
-   M = gru->nb_inputs;
-   N = gru->nb_neurons;
-   z = zrh;
-   r = &zrh[N];
-   h = &zrh[2*N];
-   celt_assert(gru->nb_neurons <= MAX_RNN_NEURONS);
-   celt_assert(input != state);
-   celt_assert(gru->reset_after);
-   stride = 3*N;
-   /* Compute update gate. */
-   for (i=0;i<3*N;i++)
-      zrh[i] = gru->bias[i];
-   sgemv_accum(zrh, gru->input_weights, 3*N, M, stride, input);
-   for (i=0;i<3*N;i++)
-      recur[i] = gru->bias[3*N + i];
-   sgemv_accum(recur, gru->recurrent_weights, 3*N, N, stride, state);
-   for (i=0;i<2*N;i++)
-      zrh[i] += recur[i];
-   compute_activation(zrh, zrh, 2*N, ACTIVATION_SIGMOID);
-   for (i=0;i<N;i++)
-      h[i] += recur[2*N+i]*r[i];
-   compute_activation(h, h, N, gru->activation);
-   for (i=0;i<N;i++)
-      h[i] = z[i]*state[i] + (1-z[i])*h[i];
-   for (i=0;i<N;i++)
-      state[i] = h[i];
-}
-
-void compute_gru3(const GRULayer *gru, float *state, const float *input)
-{
-   int i;
-   int N;
-   int stride;
-   float zrh[3*MAX_RNN_NEURONS];
-   float recur[3*MAX_RNN_NEURONS];
-   float *z;
-   float *r;
-   float *h;
-   N = gru->nb_neurons;
-   z = zrh;
-   r = &zrh[N];
-   h = &zrh[2*N];
-   celt_assert(gru->nb_neurons <= MAX_RNN_NEURONS);
-   celt_assert(input != state);
-   celt_assert(gru->reset_after);
-   stride = 3*N;
-   RNN_COPY(zrh, input, 3*N);
-   for (i=0;i<3*N;i++)
-      recur[i] = gru->bias[3*N + i];
-   sgemv_accum(recur, gru->recurrent_weights, 3*N, N, stride, state);
-   for (i=0;i<2*N;i++)
-      zrh[i] += recur[i];
-   compute_activation(zrh, zrh, 2*N, ACTIVATION_SIGMOID);
-   for (i=0;i<N;i++)
-      h[i] += recur[2*N+i]*r[i];
-   compute_activation(h, h, N, gru->activation);
-   for (i=0;i<N;i++)
-      h[i] = z[i]*state[i] + (1-z[i])*h[i];
-   for (i=0;i<N;i++)
-      state[i] = h[i];
-}
-
-void compute_sparse_gru(const SparseGRULayer *gru, float *state, const float *input)
-{
-   int i, k;
-   int N;
-   float zrh[3*MAX_RNN_NEURONS];
-   float recur[3*MAX_RNN_NEURONS];
-   float *z;
-   float *r;
-   float *h;
-   N = gru->nb_neurons;
-   z = zrh;
-   r = &zrh[N];
-   h = &zrh[2*N];
-   celt_assert(gru->nb_neurons <= MAX_RNN_NEURONS);
-   celt_assert(input != state);
-   celt_assert(gru->reset_after);
-   RNN_COPY(zrh, input, 3*N);
-   for (i=0;i<3*N;i++)
-      recur[i] = gru->bias[3*N + i];
-   for (k=0;k<3;k++)
-   {
-      for (i=0;i<N;i++)
-         recur[k*N + i] += gru->diag_weights[k*N + i]*state[i];
-   }
-   sparse_sgemv_accum16(recur, gru->recurrent_weights, 3*N, gru->idx, state);
-   for (i=0;i<2*N;i++)
-      zrh[i] += recur[i];
-   compute_activation(zrh, zrh, 2*N, ACTIVATION_SIGMOID);
-   for (i=0;i<N;i++)
-      h[i] += recur[2*N+i]*r[i];
-   compute_activation(h, h, N, gru->activation);
-   for (i=0;i<N;i++)
-      h[i] = z[i]*state[i] + (1-z[i])*h[i];
-   for (i=0;i<N;i++)
-      state[i] = h[i];
-}
-
 void compute_conv1d(const Conv1DLayer *layer, float *output, float *mem, const float *input)
 {
    int i;
@@ -356,46 +221,4 @@ void accum_embedding(const EmbeddingLayer *layer, float *output, int input)
    {
       output[i] += layer->embedding_weights[input*layer->dim + i];
    }    
-}
-
-int sample_from_pdf(const float *pdf, int N, float exp_boost, float pdf_floor)
-{
-    int i;
-    float sum, norm;
-    float r;
-    float tmp[DUAL_FC_OUT_SIZE];
-    celt_assert(N <= DUAL_FC_OUT_SIZE);
-    sum = 0;
-#ifdef SOFTMAX_HACK
-    for (i=0;i<N;i++)
-    {
-        tmp[i] = pdf[i] * (1.f+exp_boost);
-    }
-    softmax(tmp, tmp, N);
-    for (i=0;i<N;i++)
-    {
-        sum += tmp[i];
-    }
-#else
-    /* Decrease the temperature of the sampling. */
-    for (i=0;i<N;i++)
-    {
-        tmp[i] = pow(pdf[i], 1.f+exp_boost);
-        sum += tmp[i];
-    }
-#endif
-    norm = 1.f/sum;
-    /* Convert tmp to a CDF while subtracting the floor */
-    tmp[0] = MAX16(0, norm*tmp[0] - pdf_floor);
-    for (i=1;i<N;i++)
-    {
-        tmp[i] = tmp[i-1] + MAX16(0, norm*tmp[i] - pdf_floor);
-    }
-    /* Do the sampling (from the cdf). */
-    r = tmp[N-1] * ((rand()+.5f)/(RAND_MAX+1.f));
-    for (i=0;i<N-1;i++)
-    {
-        if (r <= tmp[i]) return i;
-    }
-    return N-1;
 }
