@@ -75,15 +75,18 @@ class CustomLoss(nn.Module):
     def forward(self, outputs, targets):
         gamma = 0.5
         C4 = 10
-
+        epsi = 1e-10
         rb_hat = outputs[0]
         gb_hat = outputs[1]
         rb = targets[:,:,:34]
         gb = targets[:,:,34:68]
-
-        return ((gb**gamma - gb_hat**gamma)**2).sum() + C4*((gb**gamma - gb_hat**gamma)**4).sum() + (((1-rb)**gamma-(1-rb_hat)**gamma)**2).sum()
+        
+        return (torch.sum(torch.pow((torch.pow(gb+epsi,gamma) - torch.pow(gb_hat+epsi,gamma)),2)))
+             #+ C4*torch.sum(torch.pow(torch.pow(gb+epsi,gamma) - torch.pow(gb_hat+epsi,gamma),4))
+             #+ torch.sum(torch.pow(torch.pow((1-rb+epsi),gamma)-torch.pow((1-rb_hat+epsi),gamma),2)))
 
 def train():
+    UseCustomLoss = False
     dataset = h5Dataset("training.h5")
     trainset_ratio = 0.8 # 1 - validation set ration
     train_size = int(trainset_ratio * len(dataset))
@@ -96,7 +99,11 @@ def train():
 
     model = PercepNet()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    criterion = CustomLoss()
+    if UseCustomLoss:
+        #CustomLoss cause Nan error need fix
+        criterion = CustomLoss()
+    else:
+        criterion = nn.MSELoss()
     num_epochs = 2
     for epoch in range(num_epochs):  # loop over the dataset multiple times
 
@@ -110,13 +117,18 @@ def train():
 
             # forward + backward + optimize
             outputs = model(inputs)
+            outputs = torch.cat(outputs,-1)
             loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
 
             # print statistics
             running_loss += loss.item()
-            print('[%d]' %(i))
+
+            # for testing
+            print('[%d, %5d] loss: %.3f' %
+                    (epoch + 1, i + 1, running_loss))
+
             if i % 2000 == 1999:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' %
                     (epoch + 1, i + 1, running_loss / 2000))
