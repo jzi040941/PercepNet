@@ -38,7 +38,7 @@ class PercepNet(nn.Module):
         #self.hidden_dim = hidden_dim
         #self.n_layers = n_layers
         
-        self.fc = nn.Linear(input_dim, 128)
+        self.fc = nn.Sequential(nn.Linear(input_dim, 128), nn.Sigmoid())
         self.conv1 = nn.Conv1d(128, 512, 5, stride=1)
         self.conv2 = nn.Conv1d(512, 512, 3, stride=1)
         self.gru = nn.GRU(512, 512, 3, batch_first=True)
