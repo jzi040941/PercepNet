@@ -437,9 +437,11 @@ void adjust_gain_strength_by_condition(CommonState st, float *Ephatp, float *Exp
   float g_att;
   for(int i=0; i<NB_BANDS; ++i){
     if(Ephatp[i]<Exp[i])
+    {
       g_att = sqrt((1+st.n0-Exp[i]*Exp[i])/(1+st.n0-Ephatp[i]*Ephatp[i]));
       r[i] = 1;
       g[i] *= g_att;
+    }
   }
 }
 
