@@ -43,6 +43,8 @@
 #define TRAINING 0
 #endif
 
+#define TEST 1
+
 static const opus_int16 eband5ms[] = {
 /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 20k*/
   0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16, 20, 24, 28, 34, 40, 48, 60, 78, 100
@@ -302,7 +304,12 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   
   RNN_MOVE(st->comb_buf, &st->comb_buf[FRAME_SIZE], COMB_BUF_SIZE-FRAME_SIZE);
   RNN_COPY(&st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE], in, FRAME_SIZE);
-
+  
+  
+  for(int i=0; i<FRAME_SIZE; i++){
+    celt_assert(st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE+i] == in[i]);
+  }
+  
   RNN_MOVE(st->pitch_buf, &st->pitch_buf[FRAME_SIZE], PITCH_BUF_SIZE-FRAME_SIZE);
   RNN_COPY(&st->pitch_buf[PITCH_BUF_SIZE-FRAME_SIZE], &st->comb_buf[COMB_BUF_SIZE-FRAME_SIZE*(FRAME_LOOKAHEAD+1)], FRAME_SIZE);
 
@@ -430,6 +437,8 @@ void filter_strength_calc(float *Exp, float *Eyp, float *Ephatp, float* r){
 void calc_ideal_gain(float *X, float *Y, float* g){
   for(int i=0; i<NB_BANDS; ++i){
     g[i] = X[i]/(.0001+Y[i]);
+    if (g[i]>1) g[i] = 1;
+    if (g[i]<0) g[i] = 0;
   }
 }
 
