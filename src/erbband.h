@@ -61,7 +61,7 @@ class ERBBand{
 
       std::vector<std::pair<std::pair<int,int>,std::vector<float>>> make_filters(int N){
           std::vector<std::pair<std::pair<int,int>,std::vector<float>>> cos_filter;
-          float freqRangePerBin = 50;//for 48000 smaplerate and 960 window_size fft
+          float freqRangePerBin = 25;//for 48000 smaplerate and 960 window_size fft
           float l_k, h_k, avg, rnge;
           int l_nfftind, h_nfftind;
           for(int k=0; k<N; k++){
