@@ -122,7 +122,7 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
   }
   for (i=0;i<NB_BANDS;i++)
   {
-    bandE[i] = fmax(0,sum[i]);
+    bandE[i] = fmin(fmax(0,sum[i]),1);
   }
  
 }
@@ -418,7 +418,7 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
 
 void estimate_phat_corr(CommonState st, float *Eyp, float *Ephatp){
   for(int i=0; i<NB_BANDS; i++){
-    Ephatp[i] = Eyp[i]/sqrt((1-pow(st.power_noise_attenuation,2))*Eyp[i] + pow(st.power_noise_attenuation,2));
+    Ephatp[i] = Eyp[i]/sqrt((1-st.power_noise_attenuation)*pow(Eyp[i],2) + st.power_noise_attenuation);
   }
 }
 
@@ -426,10 +426,14 @@ void filter_strength_calc(float *Exp, float *Eyp, float *Ephatp, float* r){
   float alpha;
   float a;
   float b;
+  float c;
   for(int i=0; i<NB_BANDS; ++i){
     a = Ephatp[i]*Ephatp[i] - Exp[i]*Exp[i];
+    if (a<0) a=0;
     b = Ephatp[i]*Eyp[i]*(1-Exp[i]*Exp[i]);
-    alpha = (sqrt(b*b + a *(Exp[i]*Exp[i]-Eyp[i]*Eyp[i]))-b)/a;
+    c = Exp[i]*Exp[i]-Eyp[i]*Eyp[i];
+    if (c<0) c=0;
+    alpha = (sqrt(b*b + a *(c))-b)/(a+1e-8);
     r[i] = alpha/(1+alpha);
   }
 }
