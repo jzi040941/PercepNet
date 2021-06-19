@@ -122,7 +122,7 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
   }
   for (i=0;i<NB_BANDS;i++)
   {
-    bandE[i] = fmin(fmax(0,sum[i]),1);
+    bandE[i] = sum[i];
   }
  
 }
@@ -341,7 +341,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   forward_transform(P, p);
   compute_band_energy(Ep, P);
   compute_band_corr(Exp, X, P);
-  for (i=0;i<NB_BANDS;i++) Exp[i] = Exp[i]/sqrt(.001+Ex[i]*Ep[i]);
+  for (i=0;i<NB_BANDS;i++) Exp[i] = fmin(1,fmax(0,Exp[i]/sqrt(.001+Ex[i]*Ep[i])));
 
   for (i=0;i<NB_BANDS;i++) {
     E += Ex[i];
@@ -493,6 +493,10 @@ int train(int argc, char **argv) {
   int gain_change_count=0;
   float speech_gain = 1, noise_gain = 1;
   FILE *f1, *f2, *f3;
+  #ifdef TEST
+  FILE *f4;
+  float out[FRAME_SIZE];
+  #endif
   int maxCount;
   DenoiseState *st;
   DenoiseState *noise_state;
@@ -507,6 +511,9 @@ int train(int argc, char **argv) {
   f1 = fopen(argv[1], "rb");
   f2 = fopen(argv[2], "rb");
   f3 = fopen(argv[4], "wb");
+  #ifdef TEST 
+  f4 = fopen("test_output.pcm", "wb");
+  #endif
   maxCount = atoi(argv[3]);
   for(i=0;i<150;i++) {
     short tmp[FRAME_SIZE];
@@ -578,12 +585,19 @@ int train(int argc, char **argv) {
     compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
     calc_ideal_gain(Ex, Ey, g);
     //compute_band_corr(Eyp, Y, P);
-    //for (i=0;i<NB_BANDS;i++) Eyp[i] = Eyp[i]/sqrt(.001+Ey[i]*Ep[i]);
+    //for (i=0;i<NB_BANDS;i++) Eyp[i] = fmin(1,fmax(0,Eyp[i]/sqrt(.001+Ey[i]*Ep[i])));
     estimate_phat_corr(common, Ephaty, Ephatp);
     filter_strength_calc(Exp, Ephaty, Ephatp, r);
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
-    
+    #ifdef TEST
+    if(!silence){
+    pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
+    }
+    frame_synthesis(st, out, X);
+    fwrite(out, sizeof(float), FRAME_SIZE, f4);
+    #endif
+
     //fwrite(features, sizeof(float), NB_FEATURES, stdout);
     fwrite(Ey, sizeof(float), NB_BANDS, f3);//Y(l+M)
     fwrite(Ephaty, sizeof(float), NB_BANDS, f3);//pitch coherence
