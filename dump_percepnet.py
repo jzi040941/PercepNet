@@ -30,7 +30,8 @@ from torch.nn import Sequential, GRU, Conv1d
 import numpy as np
 
 def printVector(f, vector, name, dtype='float'):
-    v = np.reshape(vector.detach().numpy(), (-1))
+    #torch.transpose(vector, 0, 1)
+    v = np.reshape(torch.transpose(vector, 0, 1).detach().numpy(), (-1))
     #print('static const float ', name, '[', len(v), '] = \n', file=f)
     f.write('static const {} {}[{}] = {{\n   '.format(dtype, name, len(v)))
     for i in range(0, len(v)):
