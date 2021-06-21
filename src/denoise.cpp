@@ -581,7 +581,7 @@ int train(int argc, char **argv) {
     //frame_analysis(st, , Ey, x);
     //frame_analysis(noise_state, N, En, n);
     //for (i=0;i<NB_BANDS;i++) Ln[i] = log10(1e-2+En[i]);
-    int silence = compute_frame_features(noisy, Y, Phat/*not use*/, Ey, Ephat/*not use*/, Ephaty, features, xn);
+    int silence = compute_frame_features(noisy, Y, Phat/*only use for Test*/, Ey, Ephat/*only use for Test*/, Ephaty, features, xn);
     compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
     calc_ideal_gain(Ex, Ey, g);
     //compute_band_corr(Eyp, Y, P);
