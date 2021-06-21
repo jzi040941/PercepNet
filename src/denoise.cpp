@@ -520,8 +520,8 @@ int train(int argc, char **argv) {
     fread(tmp, sizeof(short), FRAME_SIZE, f2);
   }
   while (1) {
-    kiss_fft_cpx X[FREQ_SIZE], Y[FREQ_SIZE], N[FREQ_SIZE], P[WINDOW_SIZE];
-    kiss_fft_cpx Phat[WINDOW_SIZE];/*only for build*/
+    kiss_fft_cpx X[FREQ_SIZE], Y[FREQ_SIZE], N[FREQ_SIZE], P[FREQ_SIZE];
+    kiss_fft_cpx Phat[FREQ_SIZE];/*only for build*/
     float Ex[NB_BANDS], Ey[NB_BANDS], En[NB_BANDS], Ep[NB_BANDS];
     float Ephat[NB_BANDS], Ephaty[NB_BANDS]; /*only for build*/
     float Exp[NB_BANDS], Eyp[NB_BANDS], Ephatp[NB_BANDS];
@@ -594,7 +594,7 @@ int train(int argc, char **argv) {
     if(!silence){
     pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
     }
-    frame_synthesis(st, out, X);
+    frame_synthesis(st, out, Y);
     fwrite(out, sizeof(float), FRAME_SIZE, f4);
     #endif
 
@@ -616,5 +616,8 @@ int train(int argc, char **argv) {
   fclose(f1);
   fclose(f2);
   fclose(f3);
+  #ifdef TEST
+  fclose(f4);
+  #endif
   return 0;
 }//
