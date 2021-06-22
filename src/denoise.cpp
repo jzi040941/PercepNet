@@ -355,6 +355,11 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
   int i;
   //float r[NB_BANDS];
   float rf[FREQ_SIZE] = {0};
+  float inv_r[NB_BANDS] = {0};
+  //FLOAT inv_rf[FREQ_SIZE] = {0};
+  for (int i=0; i<NB_BANDS; i++){
+    inv_r[i]=1-r[i];
+  }
   /*
   for (i=0;i<NB_BANDS;i++) {
     
@@ -370,11 +375,17 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
     r[i] *= sqrt(Ex[i]/(1e-8+Ep[i]));
   }
   */
+  interp_band_gain(rf, inv_r);
+  for (i=0;i<FREQ_SIZE;i++) {
+    X[i].r = rf[i]*X[i].r;
+    X[i].i = rf[i]*X[i].i;
+  }
   interp_band_gain(rf, r);
   for (i=0;i<FREQ_SIZE;i++) {
-    X[i].r = rf[i]*P[i].r;
-    X[i].i = rf[i]*P[i].i;
+    X[i].r += rf[i]*P[i].r;
+    X[i].i += rf[i]*P[i].i;
   }
+  /*
   float newE[NB_BANDS];
   compute_band_energy(newE, X);
   float norm[NB_BANDS];
@@ -387,6 +398,7 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
     X[i].r *= normf[i];
     X[i].i *= normf[i];
   }
+  */
 }
 
 float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
@@ -496,6 +508,8 @@ int train(int argc, char **argv) {
   #ifdef TEST
   FILE *f4;
   float out[FRAME_SIZE];
+  short out_short[FRAME_SIZE];
+  float gf[FREQ_SIZE]={1};
   #endif
   int maxCount;
   DenoiseState *st;
@@ -594,8 +608,18 @@ int train(int argc, char **argv) {
     if(!silence){
     pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
     }
+    interp_band_gain(gf, g);
+    /*
+    for (i=0;i<FREQ_SIZE;i++) {
+      Y[i].r *= gf[i];
+      Y[i].i *= gf[i];
+    }
+    */
     frame_synthesis(st, out, Y);
-    fwrite(out, sizeof(float), FRAME_SIZE, f4);
+    for(int i=0; i<FRAME_SIZE; i++){
+      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]));
+    }
+    fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
     #endif
 
     //fwrite(features, sizeof(float), NB_FEATURES, stdout);
