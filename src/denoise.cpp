@@ -76,7 +76,7 @@ struct DenoiseState {
   //RNNState rnn;
 };
 
-ERBBand *erb_band = new ERBBand(WINDOW_SIZE, NB_BANDS, 0/*low_freq*/, 20000/*high_freq*/);
+ERBBand *erb_band = new ERBBand(WINDOW_SIZE, NB_BANDS-2, 0/*low_freq*/, 20000/*high_freq*/);
 
 void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   int i;
@@ -85,7 +85,17 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   {
     int j;
     int band_size;
-    //band_size = (eband5ms[i+1]-eband5ms[i])<<FRAME_SIZE_SHIFT;
+    band_size = (erb_band->nfftborder[i+1]-erb_band->nfftborder[i]);
+    for (j=0;j<band_size;j++) {
+      float tmp;
+      float frac = (float)j/band_size;
+      tmp = SQUARE(X[(erb_band->nfftborder[i]) + j].r);
+      tmp += SQUARE(X[(erb_band->nfftborder[i]) + j].i);
+      sum[i] += (1-frac)*tmp;
+      sum[i+1] += frac*tmp;
+    }
+    /*
+    //ERBBand cosfilter is not working in interp_gain
     int low_nfft_idx = erb_band->filters[i].first.first;
     int high_nfft_idx = erb_band->filters[i].first.second;
     for(j=low_nfft_idx; j<high_nfft_idx; j++){
@@ -93,9 +103,11 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
       tmp = SQUARE(X[j].r);
       tmp += SQUARE(X[j].i);
       sum[i] += tmp*erb_band->filters[i].second[j-low_nfft_idx];
-
     }
+    */
   }
+  sum[0] *= 2;
+  sum[NB_BANDS-1] *= 2;
   for (i=0;i<NB_BANDS;i++)
   {
     bandE[i] = sum[i];
@@ -109,7 +121,16 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
   {
     int j;
     int band_size;
-    //band_size = (eband5ms[i+1]-eband5ms[i])<<FRAME_SIZE_SHIFT;
+    band_size = (erb_band->nfftborder[i+1]-erb_band->nfftborder[i]);
+    for (j=0;j<band_size;j++) {
+      float tmp;
+      float frac = (float)j/band_size;
+      tmp = X[(erb_band->nfftborder[i]) + j].r * P[(erb_band->nfftborder[i]) + j].r;
+      tmp += X[(erb_band->nfftborder[i]) + j].i * P[(erb_band->nfftborder[i]) + j].i;
+      sum[i] += (1-frac)*tmp;
+      sum[i+1] += frac*tmp;
+    }
+    /*
     int low_nfft_idx = erb_band->filters[i].first.first;
     int high_nfft_idx = erb_band->filters[i].first.second;
     for(j=low_nfft_idx; j<high_nfft_idx; j++){
@@ -119,6 +140,7 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
       sum[i] += tmp*erb_band->filters[i].second[j-low_nfft_idx];
 
     }
+    */
   }
   for (i=0;i<NB_BANDS;i++)
   {
@@ -134,12 +156,18 @@ void interp_band_gain(float *g, const float *bandE) {
   {
     int j;
     int band_size;
-    //band_size = (eband5ms[i+1]-eband5ms[i])<<FRAME_SIZE_SHIFT;
+    band_size = (erb_band->nfftborder[i+1]-erb_band->nfftborder[i]);
+    for (j=0;j<band_size;j++) {
+      float frac = (float)j/band_size;
+      g[(erb_band->nfftborder[i]) + j] = (1-frac)*bandE[i] + frac*bandE[i+1];
+    }
+    /*
     int low_nfft_idx = erb_band->filters[i].first.first;
     int high_nfft_idx = erb_band->filters[i].first.second;
     for(j=low_nfft_idx; j<high_nfft_idx; j++){
-      g[j] += erb_band->filters[i].second[j-low_nfft_idx]*bandE[i];
+      g[j] += bandE[i]/erb_band->filters[i].second[j-low_nfft_idx];
     }
+    */
   }
 }
 
@@ -605,16 +633,17 @@ int train(int argc, char **argv) {
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     #ifdef TEST
+    
     if(!silence){
     pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
     }
     interp_band_gain(gf, g);
-    /*
+    
     for (i=0;i<FREQ_SIZE;i++) {
       Y[i].r *= gf[i];
       Y[i].i *= gf[i];
     }
-    */
+    
     frame_synthesis(st, out, Y);
     for(int i=0; i<FRAME_SIZE; i++){
       out_short[i] = (short)fmax(-32768,fmin(32767, out[i]));

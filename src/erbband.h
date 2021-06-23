@@ -38,6 +38,7 @@ class ERBBand{
     
     
     public:
+    std::vector<int> nfftborder,centerfreqs;
       std::vector<std::pair<std::pair<int,int>,std::vector<float>>> filters;
       ERBBand(int window_size, int N, float low_lim, float high_lim){
           cutoffs.assign(N+2,0);
@@ -64,12 +65,21 @@ class ERBBand{
           float freqRangePerBin = 50;//for 48000 smaplerate and 960 window_size fft
           float l_k, h_k, avg, rnge;
           int l_nfftind, h_nfftind;
+          for(int k=0; k<N+2; k++){
+            nfftborder.push_back((cutoffs[k]+25)/freqRangePerBin);//divide by 50 and round up
+          }
+          //impose mininum 100hz(2 nfft)
+          for(int k=0; k<N; k++){
+            if(nfftborder[k+2]-nfftborder[k]<2)
+              nfftborder[k+2]+=(2-(nfftborder[k+2]-nfftborder[k]));
+          }
           for(int k=0; k<N; k++){
               l_k = cutoffs[k];
               h_k = cutoffs[k+2];
               //impose minimum 100hz
               if(h_k-l_k < 100)
                   h_k=l_k + 100;
+              
               l_nfftind = (int)(l_k/freqRangePerBin) +1;
               h_nfftind = (int)(h_k/freqRangePerBin);
               avg = (freq2erb(l_k) + freq2erb(h_k))/2;
@@ -79,6 +89,9 @@ class ERBBand{
               for(int i=l_nfftind; i<h_nfftind+1; i++)
                   kthfilter.second.push_back(cos( (freq2erb(freqRangePerBin*i)-avg)/rnge * M_PI )  );
               cos_filter.push_back(kthfilter);
+          }
+          for (auto kthfilter : cos_filter){
+              
           }
           return cos_filter;
       }
