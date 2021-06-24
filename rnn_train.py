@@ -41,10 +41,13 @@ class PercepNet(nn.Module):
         self.fc = nn.Sequential(nn.Linear(input_dim, 128), nn.Sigmoid())
         self.conv1 = nn.Conv1d(128, 512, 5, stride=1)
         self.conv2 = nn.Conv1d(512, 512, 3, stride=1)
-        self.gru = nn.GRU(512, 512, 3, batch_first=True)
+        #self.gru = nn.GRU(512, 512, 3, batch_first=True)
+        self.gru1 = nn.GRU(512, 512, 1, batch_first=True)
+        self.gru2 = nn.GRU(512, 512, 1, batch_first=True)
+        self.gru3 = nn.GRU(512, 512, 1, batch_first=True)
         self.gru_gb = nn.GRU(512, 512, 1, batch_first=True)
-        self.gru_rb = nn.GRU(512, 128, 1, batch_first=True)
-        self.fc_gb = nn.Sequential(nn.Linear(512, 34), nn.Sigmoid())
+        self.gru_rb = nn.GRU(1024, 128, 1, batch_first=True)
+        self.fc_gb = nn.Sequential(nn.Linear(512*5, 34), nn.Sigmoid())
         self.fc_rb = nn.Sequential(nn.Linear(128, 34), nn.Sigmoid())
 
     def forward(self, x):
@@ -53,12 +56,16 @@ class PercepNet(nn.Module):
         x = self.conv1(x)
         convout = self.conv2(x)
         convout = convout.permute([0,2,1]) # B, T, D
-        gruout, grustate = self.gru(convout)
-        
-        rnn_gb_out = self.gru_gb(gruout)
-        gb = self.fc_gb(rnn_gb_out[0])
+        gru1_out, gru1_state = self.gru1(convout)
+        gru2_out, gru2_state = self.gru2(gru1_out)
+        gru3_out, gru3_state = self.gru3(gru2_out)
+        gru_gb_out, gru_gb_state = self.gru_gb(gru3_out)
+        concat_gb_layer = torch.cat((gru1_out,gru2_out,gru3_out,gru_gb_out),-1)
+        gb = self.fc_gb(concat_gb_layer)
 
-        rnn_rb_out = self.gru_rb(gruout)
+        #concat rb need fix
+        #concat_rb_layer = torch.cat((gru3_out)
+        rnn_rb_out, gru_rb_state = self.gru_rb(gru3_out)
         rb = self.fc_rb(rnn_rb_out[0])
         return gb,rb
 
