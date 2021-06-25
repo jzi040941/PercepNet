@@ -60,7 +60,7 @@ class PercepNet(nn.Module):
         gru2_out, gru2_state = self.gru2(gru1_out)
         gru3_out, gru3_state = self.gru3(gru2_out)
         gru_gb_out, gru_gb_state = self.gru_gb(gru3_out)
-        concat_gb_layer = torch.cat((gru1_out,gru2_out,gru3_out,gru_gb_out),-1)
+        concat_gb_layer = torch.cat((convout,gru1_out,gru2_out,gru3_out,gru_gb_out),-1)
         gb = self.fc_gb(concat_gb_layer)
 
         #concat rb need fix
@@ -111,7 +111,7 @@ def train():
         criterion = CustomLoss()
     else:
         criterion = nn.MSELoss()
-    num_epochs = 2
+    num_epochs = 10
     for epoch in range(num_epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
