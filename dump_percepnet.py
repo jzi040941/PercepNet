@@ -31,7 +31,7 @@ import numpy as np
 
 def printVector(f, vector, name, dtype='float'):
     #torch.transpose(vector, 0, 1)
-    v = np.reshape(torch.transpose(vector, 0, 1).detach().numpy(), (-1))
+    v = np.reshape(vector.detach().numpy(), (-1))
     #print('static const float ', name, '[', len(v), '] = \n', file=f)
     f.write('static const {} {}[{}] = {{\n   '.format(dtype, name, len(v)))
     for i in range(0, len(v)):
@@ -54,8 +54,8 @@ def dump_fc_module(self, f, name):
     bias = self[0].bias
     print("weight:", weight)
     activation = self[1].__class__.__name__.upper()
-    printVector(f, weight, name + '_weights')
-    printVector(f, bias, name + '_bias')
+    printVector(f, torch.transpose(weight, 0, 1), name + '_weights')
+    printVector(f, torch.transpose(bias, 0, 1), name + '_bias')
     f.write('const DenseLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, ACTIVATION_{}\n}};\n\n'
             .format(name, name, name, weight.shape[1], weight.shape[0], activation))
 Sequential.dump_data = dump_fc_module
