@@ -64,9 +64,9 @@ class PercepNet(nn.Module):
         gb = self.fc_gb(concat_gb_layer)
 
         #concat rb need fix
-        #concat_rb_layer = torch.cat((gru3_out)
-        rnn_rb_out, gru_rb_state = self.gru_rb(gru3_out)
-        rb = self.fc_rb(rnn_rb_out[0])
+        concat_rb_layer = torch.cat((gru3_out,convout),-1)
+        rnn_rb_out, gru_rb_state = self.gru_rb(concat_rb_layer)
+        rb = self.fc_rb(rnn_rb_out)
         return gb,rb
 
 def test():
@@ -88,12 +88,12 @@ class CustomLoss(nn.Module):
         rb = targets[:,:,:34]
         gb = targets[:,:,34:68]
         
-        return (torch.sum(torch.pow((torch.pow(gb+epsi,gamma) - torch.pow(gb_hat+epsi,gamma)),2)))
-             #+ C4*torch.sum(torch.pow(torch.pow(gb+epsi,gamma) - torch.pow(gb_hat+epsi,gamma),4))
-             #+ torch.sum(torch.pow(torch.pow((1-rb+epsi),gamma)-torch.pow((1-rb_hat+epsi),gamma),2)))
+        return (torch.sum(torch.pow((torch.pow(gb,gamma) - torch.pow(gb_hat,gamma)),2))) \
+             + C4*torch.sum(torch.pow(torch.pow(gb,gamma) - torch.pow(gb_hat,gamma),4)) \
+             + torch.sum(torch.pow(torch.pow((1-rb),gamma)-torch.pow((1-rb_hat),gamma),2))
 
 def train():
-    UseCustomLoss = False
+    UseCustomLoss = True
     dataset = h5Dataset("training.h5")
     trainset_ratio = 0.8 # 1 - validation set ration
     train_size = int(trainset_ratio * len(dataset))
@@ -124,7 +124,7 @@ def train():
 
             # forward + backward + optimize
             outputs = model(inputs)
-            outputs = torch.cat(outputs,-1)
+            #outputs = torch.cat(outputs,-1)
             loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
