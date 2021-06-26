@@ -61,11 +61,42 @@ def dump_fc_module(self, f, name):
 Sequential.dump_data = dump_fc_module
 
 def dump_gru_module(self, f, name):
-    pass
+    print("printing layer " + name )
+    weights = self.weight_ih_l0
+    bias = torch.cat((self.bias_ih_l0, self.bias_hh_l0),-1)
+    printVector(f, torch.transpose(weights, 0, 1), name + '_weights')
+    printVector(f, torch.transpose(self.weight_ih_l0, 0, 1), name + '_recurrent_weights')
+    printVector(f, bias, name + '_bias')
+    if hasattr(self, 'activation'):
+        activation = self.activation.__name__.upper()
+    else:
+        activation = 'TANH'
+    if hasattr(self, 'reset_after') and not self.reset_after:
+        reset_after = 0
+    else:
+        reset_after = 1
+    neurons = weights.shape[0]//3
+    #max_rnn_neurons = max(max_rnn_neurons, neurons)
+    f.write('const GRULayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}_recurrent_weights,\n   {}, {}, ACTIVATION_{}, {}\n}};\n\n'
+            .format(name, name, name, name, weights.shape[1], weights.shape[0]//3, activation, reset_after))
+    #hf.write('#define {}_OUT_SIZE {}\n'.format(name.upper(), weights[0].shape[1]//3))
+    #hf.write('#define {}_STATE_SIZE {}\n'.format(name.upper(), weights[0].shape[1]//3))
+    #hf.write('extern const GRULayer {};\n\n'.format(name))
 GRU.dump_data = dump_gru_module
 
 def dump_conv1d_module(self, f, name):
-    pass
+    print("printing layer " + name )
+    weights = self.weight
+    printVector(f, self.weight, name + '_weights')
+    printVector(f, self.bias, name + '_bias')
+    activation = self.activation.__name__.upper()
+    #max_conv_inputs = max(max_conv_inputs, weights[0].shape[1]*weights[0].shape[0])
+    f.write('const Conv1DLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, {}, ACTIVATION_{}\n}};\n\n'
+            .format(name, name, name, weights[0].shape[1], weights[0].shape[0], weights[0].shape[2], activation))
+    #hf.write('#define {}_OUT_SIZE {}\n'.format(name.upper(), weights[0].shape[2]))
+    #hf.write('#define {}_STATE_SIZE ({}*{})\n'.format(name.upper(), weights[0].shape[1], (weights[0].shape[0]-1)))
+    #hf.write('#define {}_DELAY {}\n'.format(name.upper(), (weights[0].shape[0]-1)//2))
+    #hf.write('extern const Conv1DLayer {};\n\n'.format(name));
 Conv1d.dump_data = dump_conv1d_module
 
 if __name__ == '__main__':
