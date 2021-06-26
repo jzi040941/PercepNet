@@ -55,7 +55,7 @@ def dump_fc_module(self, f, name):
     print("weight:", weight)
     activation = self[1].__class__.__name__.upper()
     printVector(f, torch.transpose(weight, 0, 1), name + '_weights')
-    printVector(f, torch.transpose(bias, 0, 1), name + '_bias')
+    printVector(f, bias, name + '_bias')
     f.write('const DenseLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, ACTIVATION_{}\n}};\n\n'
             .format(name, name, name, weight.shape[1], weight.shape[0], activation))
 Sequential.dump_data = dump_fc_module
