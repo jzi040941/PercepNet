@@ -141,3 +141,4 @@ cython_debug/
 
 *.exe
 src/*.pcm
+*.wav
