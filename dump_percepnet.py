@@ -89,10 +89,11 @@ def dump_conv1d_module(self, f, name):
     weights = self.weight
     printVector(f, self.weight, name + '_weights')
     printVector(f, self.bias, name + '_bias')
-    activation = self.activation.__name__.upper()
+    #activation = self.activation.__name__.upper()
     #max_conv_inputs = max(max_conv_inputs, weights[0].shape[1]*weights[0].shape[0])
+    #warn! activation hard codedW
     f.write('const Conv1DLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, {}, ACTIVATION_{}\n}};\n\n'
-            .format(name, name, name, weights[0].shape[1], weights[0].shape[0], weights[0].shape[2], activation))
+            .format(name, name, name, weights.shape[1], weights.shape[0], weights.shape[2], "SIGMOID"))
     #hf.write('#define {}_OUT_SIZE {}\n'.format(name.upper(), weights[0].shape[2]))
     #hf.write('#define {}_STATE_SIZE ({}*{})\n'.format(name.upper(), weights[0].shape[1], (weights[0].shape[0]-1)))
     #hf.write('#define {}_DELAY {}\n'.format(name.upper(), (weights[0].shape[0]-1)//2))
@@ -110,7 +111,6 @@ if __name__ == '__main__':
     else:
         cfile = 'src/nnet_data.c'
         #hfile = 'nnet_data.h'
-
 
     f = open(cfile, 'w')
     #hf = open(hfile, 'w')
