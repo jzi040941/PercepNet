@@ -25,3 +25,38 @@
 */
 
 . ./path.sh || exit 1;
+
+dataset_dir="sampledata"
+noise_dir="noise"
+clean_dir="clean"
+h5_dir="h5"
+model_filename="training_h5"
+
+###################################################
+#resample to 48khz and convert wav to pcm         #
+###################################################
+##TODO: with sox
+
+###################################################
+#Generate data for each noise and clean data      #
+###################################################
+for noise_pcm in "${PRJ_ROOT}/${dataset_dir}/${clean_dir}/*.pcm"
+do
+   for clean_pcm in "${PRJ_ROOT}/${dataset_dir}/${noise_dir}/*.pcm"
+   do
+      echo "$noise_pcm $clean_pcm"
+   done
+done
+
+###################################################
+#Convert features to h5 files                     #
+###################################################
+
+###################################################
+#Train pytorch model                              #
+###################################################
+
+###################################################
+#Convert pytorch model to c++ header              #
+###################################################
+#dump_percepnet.py ...
