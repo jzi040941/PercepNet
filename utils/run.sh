@@ -47,6 +47,11 @@ for noise_pcm in "${PRJ_ROOT}/${dataset_dir}/${clean_dir}/*.pcm"
 do
    for clean_pcm in "${PRJ_ROOT}/${dataset_dir}/${noise_dir}/*.pcm"
    do
+      #TODO: check pcm filesize and count
+      #src/main ${PRJ_ROOT}/${dataset_dir}/${clean_dir}/${clean_pcm} \
+      #${PRJ_ROOT}/${dataset_dir}/${noise_dir}/${noise_pcm} \
+      #${train_size_per_batch} \
+      #${PRJ_ROOT}/${dataset_dir}/${feature_dir}/${clean_pcm}${noise_pcm}.out
       echo "${noise_pcm} ${clean_pcm}"
    done
 done
@@ -56,14 +61,16 @@ done
 ###################################################
 for featurefile in "${PRJ_ROOT}/${dataset_dir}/${feature_dir}/*.out"
 do
-   python3 bin2h5.py ${featurefile} ${featuerfile}.h5
+   python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${h5_dir}/${featuerfile}.h5
 done
 
 ###################################################
 #Train pytorch model                              #
 ###################################################
-python3 train
+python3 rnn_train.py --train_size_per_batch ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${h5_dir} \
+                     --model_filename ${model_filename}
+
 ###################################################
 #Convert pytorch model to c++ header              #
 ###################################################
-#python3 dump_percepnet.py ...
+python3 dump_percepnet.py ${model_filename}
