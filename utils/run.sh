@@ -1,3 +1,4 @@
+#!/bin/bash
 /* Copyright (c) 2021 Seonghun Noh */
 /*
    Redistribution and use in source and binary forms, with or without
@@ -29,8 +30,10 @@
 dataset_dir="sampledata"
 noise_dir="noise"
 clean_dir="clean"
+feature_dir="feature"
 h5_dir="h5"
-model_filename="training_h5"
+model_filename="model.pt"
+train_size_per_batch=2000
 
 ###################################################
 #resample to 48khz and convert wav to pcm         #
@@ -44,19 +47,23 @@ for noise_pcm in "${PRJ_ROOT}/${dataset_dir}/${clean_dir}/*.pcm"
 do
    for clean_pcm in "${PRJ_ROOT}/${dataset_dir}/${noise_dir}/*.pcm"
    do
-      echo "$noise_pcm $clean_pcm"
+      echo "${noise_pcm} ${clean_pcm}"
    done
 done
 
 ###################################################
 #Convert features to h5 files                     #
 ###################################################
+for featurefile in "${PRJ_ROOT}/${dataset_dir}/${feature_dir}/*.out"
+do
+   python3 bin2h5.py ${featurefile} ${featuerfile}.h5
+done
 
 ###################################################
 #Train pytorch model                              #
 ###################################################
-
+python3 train
 ###################################################
 #Convert pytorch model to c++ header              #
 ###################################################
-#dump_percepnet.py ...
+#python3 dump_percepnet.py ...
