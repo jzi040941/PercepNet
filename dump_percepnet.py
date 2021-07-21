@@ -52,7 +52,7 @@ def dump_fc_module(self, f, name):
     print("printing layer " + name)
     weight = self[0].weight
     bias = self[0].bias
-    print("weight:", weight)
+    #print("weight:", weight)
     activation = self[1].__class__.__name__.upper()
     printVector(f, torch.transpose(weight, 0, 1), name + '_weights')
     printVector(f, bias, name + '_bias')
@@ -120,3 +120,6 @@ if __name__ == '__main__':
 
     for name, module in model.named_children():
         module.dump_data(f, name)
+
+    f.close()
+    print("done")
