@@ -44,10 +44,8 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   float dense_out[MAX_NEURONS];
   float first_conv1d_out[CONV_DIM];
   float second_conv1d_out[CONV_DIM];
-  float noise_input[MAX_NEURONS*3];
-  float denoise_input[MAX_NEURONS*3];
-  float gb_dense_input[MAX_NEURONS*5];
-  float rb_gru_input[MAX_NEURONS*5];
+  float gb_dense_input[CONV_DIM*5];
+  float rb_gru_input[CONV_DIM*2];
   compute_dense(rnn->model->input_dense, dense_out, input);
   compute_conv1d(rnn->model->first_conv1d, first_conv1d_out/*512*/, rnn->first_conv1d_state, dense_out);
   compute_conv1d(rnn->model->second_conv1d, second_conv1d_out/*512*/, rnn->second_conv1d_state, first_conv1d_out);
@@ -65,16 +63,16 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   compute_gru(rnn->model->gb_gru, rnn->gb_gru_state, rnn->gru3_state);
 
   //concat for rb gru
-  for (i=0;i<MAX_NEURONS;i++) rb_gru_input[i] = rnn->convout_buf[i];
-  for (i=0;i<MAX_NEURONS;i++) rb_gru_input[i+MAX_NEURONS] = rnn->gru3_state[i];
+  for (i=0;i<CONV_DIM;i++) rb_gru_input[i] = rnn->convout_buf[i];
+  for (i=0;i<CONV_DIM;i++) rb_gru_input[i+CONV_DIM] = rnn->gru3_state[i];
   compute_gru(rnn->model->rb_gru, rnn->rb_gru_state, rb_gru_input);
   
-  //concat for gb dense
-  for (i=0;i<MAX_NEURONS;i++) gb_dense_input[i] = rnn->convout_buf[i];
-  for (i=0;i<MAX_NEURONS;i++) gb_dense_input[i+MAX_NEURONS] = rnn->gru1_state[i];
-  for (i=0;i<MAX_NEURONS;i++) gb_dense_input[i+2*MAX_NEURONS] = rnn->gru2_state[i];
-  for (i=0;i<MAX_NEURONS;i++) gb_dense_input[i+3*MAX_NEURONS] = rnn->gru3_state[i];
-  for (i=0;i<MAX_NEURONS;i++) gb_dense_input[i+4*MAX_NEURONS] = rnn->gb_gru_state[i];
+  //concat for gb denseW
+  for (i=0;i<CONV_DIM;i++) gb_dense_input[i] = rnn->convout_buf[i];
+  for (i=0;i<CONV_DIM;i++) gb_dense_input[i+CONV_DIM] = rnn->gru1_state[i];
+  for (i=0;i<CONV_DIM;i++) gb_dense_input[i+2*CONV_DIM] = rnn->gru2_state[i];
+  for (i=0;i<CONV_DIM;i++) gb_dense_input[i+3*CONV_DIM] = rnn->gru3_state[i];
+  for (i=0;i<CONV_DIM;i++) gb_dense_input[i+4*CONV_DIM] = rnn->gb_gru_state[i];
   compute_dense(rnn->model->gb_output, gains, gb_dense_input);
 
   compute_dense(rnn->model->rb_output, strengths, rnn->rb_gru_state);
