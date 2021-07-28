@@ -21,7 +21,7 @@ class h5Dataset(Dataset):
         x_train = all_data[:self.nb_sequences*self.window_size, :self.x_dim]
         self.x_train = np.reshape(x_train, (self.nb_sequences, self.window_size, self.x_dim))
         #pad 3 for each batch .. not sure it's right
-        self.x_train = np.pad(self.x_train,[(0,0),(3,3),(0,0)],'constant')
+        #self.x_train = np.pad(self.x_train,[(0,0),(3,3),(0,0)],'constant')
 
         y_train = np.copy(all_data[:self.nb_sequences*self.window_size, self.x_dim:self.x_dim+self.y_dim])
         self.y_train = np.reshape(y_train, (self.nb_sequences, self.window_size, self.y_dim))
@@ -39,8 +39,8 @@ class PercepNet(nn.Module):
         #self.n_layers = n_layers
         
         self.fc = nn.Sequential(nn.Linear(input_dim, 128), nn.Sigmoid())
-        self.conv1 = nn.Conv1d(128, 512, 5, stride=1)
-        self.conv2 = nn.Conv1d(512, 512, 3, stride=1)
+        self.conv1 = nn.Conv1d(128, 512, 5, stride=1, padding=2)
+        self.conv2 = nn.Conv1d(512, 512, 3, stride=1, padding=1)
         #self.gru = nn.GRU(512, 512, 3, batch_first=True)
         self.gru1 = nn.GRU(512, 512, 1, batch_first=True)
         self.gru2 = nn.GRU(512, 512, 1, batch_first=True)
