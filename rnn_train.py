@@ -101,8 +101,8 @@ def train():
     batch_size=2
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
-    validation_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    validation_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     model = PercepNet()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -134,7 +134,7 @@ def train():
 
             # for testing
             print('[%d, %5d] loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss))
+                    (epoch + 1, i + 1, loss.item()))
 
             if i % 2000 == 1999:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' %
