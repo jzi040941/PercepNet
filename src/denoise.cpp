@@ -83,7 +83,7 @@ ERBBand *erb_band = new ERBBand(WINDOW_SIZE, NB_BANDS-2, 0/*low_freq*/, 20000/*h
 void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   int i;
   float sum[NB_BANDS] = {0};
-  for (i=0;i<NB_BANDS;i++)
+  for (i=0;i<NB_BANDS-1;i++)
   {
     int j;
     int band_size;
@@ -110,7 +110,7 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   }
   sum[0] *= 2;
   sum[NB_BANDS-1] *= 2;
-  for (i=0;i<NB_BANDS;i++)
+  for (i=0;i<NB_BANDS-1;i++)
   {
     bandE[i] = sum[i];
   }
@@ -119,7 +119,7 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
 void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *P) {
   int i;
   float sum[NB_BANDS] = {0};
-  for (i=0;i<NB_BANDS;i++)
+  for (i=0;i<NB_BANDS-1;i++)
   {
     int j;
     int band_size;
@@ -144,7 +144,9 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
     }
     */
   }
-  for (i=0;i<NB_BANDS;i++)
+  sum[0] *= 2;
+  sum[NB_BANDS-1] *= 2;
+  for (i=0;i<NB_BANDS-1;i++)
   {
     bandE[i] = sum[i];
   }
@@ -154,7 +156,7 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
 void interp_band_gain(float *g, const float *bandE) {
   int i;
   memset(g, 0, FREQ_SIZE);
-  for (i=0;i<NB_BANDS;i++)
+  for (i=0;i<NB_BANDS-1;i++)
   {
     int j;
     int band_size;
