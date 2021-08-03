@@ -1,7 +1,7 @@
 import torch
 import sys
 from torch import nn
-sys.path.append("../../")
+sys.path.append("../")
 import dump_percepnet
 from dump_percepnet import printVector
 class PercepNet(nn.Module):
@@ -15,7 +15,7 @@ class PercepNet(nn.Module):
 if __name__ == '__main__':
     model = PercepNet()
 
-    cfile = 'nnet_data.h'
+    cfile = 'nnet_data_test.h'
 
     f = open(cfile, 'w')
 

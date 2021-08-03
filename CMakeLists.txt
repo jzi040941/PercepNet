@@ -15,9 +15,8 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-file(GLOB MY_SRCS ${PROJECT_SOURCE_DIR}/src/*.cpp)
-set(MY_INCLUDES ${PROJECT_SOURCE_DIR}/src)
+include_directories(src)
 
-add_subdirectory(src)
 include(GoogleTest)
-gtest_discover_tests(nnet_test)
+add_subdirectory(src)
+add_subdirectory(tests)
