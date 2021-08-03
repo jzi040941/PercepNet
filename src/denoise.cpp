@@ -110,7 +110,7 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   }
   sum[0] *= 2;
   sum[NB_BANDS-1] *= 2;
-  for (i=0;i<NB_BANDS-1;i++)
+  for (i=0;i<NB_BANDS;i++)
   {
     bandE[i] = sum[i];
   }
@@ -146,7 +146,7 @@ void compute_band_corr(float *bandE, const kiss_fft_cpx *X, const kiss_fft_cpx *
   }
   sum[0] *= 2;
   sum[NB_BANDS-1] *= 2;
-  for (i=0;i<NB_BANDS-1;i++)
+  for (i=0;i<NB_BANDS;i++)
   {
     bandE[i] = sum[i];
   }
