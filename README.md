@@ -65,7 +65,7 @@ clean speech - VCTK 48k wav https://datashare.is.ed.ac.uk/handle/10283/2791 (cle
 noise data - DEMAND 48k wav https://zenodo.org/record/1227121#__sid=js0 (*.48k.zip)
 
 ## Acknowledgements
-[@jasdasdf]( https://github.com/jasdasdf ), [@sTarAnna]( https://github.com/sTarAnna ), [@cookcodes]( https://github.com/cookcodes ), [@xyx361100238]( https://github.com/xyx361100238 ), [@zhangyutf]( https://github.com/zhangyutf ), [@TeaPoly](https://github.com/TeaPoly ), [@rameshkunasi]( https://github.com/rameshkunasi ),  [@OscarLiau]( https://github.com/OscarLiau ), [@YangangCao]( https://github.com/YangangCao )
+[@jasdasdf]( https://github.com/jasdasdf ), [@sTarAnna]( https://github.com/sTarAnna ), [@cookcodes]( https://github.com/cookcodes ), [@xyx361100238]( https://github.com/xyx361100238 ), [@zhangyutf]( https://github.com/zhangyutf ), [@TeaPoly](https://github.com/TeaPoly ), [@rameshkunasi]( https://github.com/rameshkunasi ),  [@OscarLiau]( https://github.com/OscarLiau ), [@YangangCao]( https://github.com/YangangCao ), Jaeyoung Yang( https://www.linkedin.com/in/jaeyoung-yang-354b21146 )
 
 [IIP Lab. Sogang Univ]( http://iip.sogang.ac.kr/) 
 
