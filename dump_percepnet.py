@@ -87,13 +87,13 @@ GRU.dump_data = dump_gru_module
 def dump_conv1d_module(self, f, name):
     print("printing layer " + name )
     weights = self.weight
-    printVector(f, self.weight, name + '_weights')
+    printVector(f, weights.permute(2,1,0), name + '_weights')
     printVector(f, self.bias, name + '_bias')
     #activation = self.activation.__name__.upper()
     #max_conv_inputs = max(max_conv_inputs, weights[0].shape[1]*weights[0].shape[0])
     #warn! activation hard codedW
     f.write('const Conv1DLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, {}, ACTIVATION_{}\n}};\n\n'
-            .format(name, name, name, weights.shape[1], weights.shape[0], weights.shape[2], "SIGMOID"))
+            .format(name, name, name, weights.shape[1], weights.shape[2], weights.shape[0], "LINEAR"))
     #hf.write('#define {}_OUT_SIZE {}\n'.format(name.upper(), weights[0].shape[2]))
     #hf.write('#define {}_STATE_SIZE ({}*{})\n'.format(name.upper(), weights[0].shape[1], (weights[0].shape[0]-1)))
     #hf.write('#define {}_DELAY {}\n'.format(name.upper(), (weights[0].shape[0]-1)//2))
