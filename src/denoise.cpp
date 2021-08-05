@@ -217,15 +217,17 @@ DenoiseState *rnnoise_create(RNNModel *model) {
 
 int rnnoise_init(DenoiseState *st, RNNModel *model) {
   memset(st, 0, sizeof(*st));
-  /*
-  if (model)
+  
+  if (model){
     st->rnn.model = model;
-  else
-    st->rnn.model = &rnnoise_model_orig;
-  st->rnn.vad_gru_state = calloc(sizeof(float), st->rnn.model->vad_gru_size);
-  st->rnn.noise_gru_state = calloc(sizeof(float), st->rnn.model->noise_gru_size);
-  st->rnn.denoise_gru_state = calloc(sizeof(float), st->rnn.model->denoise_gru_size);
-  */
+    st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->first_conv1d->kernel_size*st->rnn.model->first_conv1d->nb_inputs);
+    st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->second_conv1d->kernel_size*st->rnn.model->second_conv1d->nb_inputs);
+    st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
+    st->rnn.gru2_state = (float*)calloc(sizeof(float), st->rnn.model->gru2->nb_neurons);
+    st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
+    st->rnn.gb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gb_gru->nb_neurons);
+    st->rnn.rb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->rb_gru->nb_neurons);
+  }
   return 0;
 }
 
