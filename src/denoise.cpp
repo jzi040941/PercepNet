@@ -13,6 +13,7 @@
 #include "common.h"
 #include "pitch.h"
 #include "erbband.h"
+#include "nnet_data.h"
 
 #define FRAME_SIZE_SHIFT 2
 #define FRAME_SIZE (120<<FRAME_SIZE_SHIFT)
@@ -75,7 +76,7 @@ struct DenoiseState {
   float pitch_corr;
   float mem_hp_x[2];
   //float lastg[NB_BANDS];
-  //RNNState rnn;
+  RNNState rnn;
 };
 
 ERBBand *erb_band = new ERBBand(WINDOW_SIZE, NB_BANDS-2, 0/*low_freq*/, 20000/*high_freq*/);
@@ -452,6 +453,7 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
   silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
 
+  compute_rnn(&st->rnn,g,r,features);
   //r will be estimated by dnn
   if(!silence){
   pitch_filter(X, P, Ex, Ep, Exp, g, r);

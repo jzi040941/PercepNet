@@ -29,6 +29,7 @@
 #define RNNOISE_H 1
 
 #include <stdio.h>
+#include "nnet_data.h"
 
 
 #ifndef RNNOISE_EXPORT
@@ -63,4 +64,6 @@ RNNOISE_EXPORT RNNModel *rnnoise_model_from_file(FILE *f);
 RNNOISE_EXPORT void rnnoise_model_free(RNNModel *model);
 
 int train(int argc, char **argv);
+
+void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *input);
 #endif

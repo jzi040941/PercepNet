@@ -4,7 +4,9 @@
 #define FRAME_SIZE 480
 
 //using namespace std;
+#ifndef TRAINING
 #define TRAINING 1
+#endif
 #define TEST 1
 int main(int argc, char **argv)
 {
