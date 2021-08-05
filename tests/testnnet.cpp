@@ -46,6 +46,24 @@ TEST(TestNnet, conv1dCheck) {
     }
 }
 
+TEST(TestNnet, gruCheck) {
+    float eps = 1e-5;
+    std::vector<float> gru1_state(gru1.nb_neurons,0);
+    std::vector<float> gru1_input(gru1.nb_inputs, 0.5);
+    //std::vector<float> gru1_output_c(gr.nb_neurons, 0);
+    compute_gru(&gru1,&gru1_state[0], &gru1_input[0]);
+
+    for(int i=0; i<gru1_state.size(); i++){
+        EXPECT_EQ(gru1_output[i], gru1_state[i]);
+        //EXPECT_LT(gru1_output[i] - gru1_state[i], eps);
+    }
+    compute_gru(&gru1,&gru1_state[0], &gru1_input[0]);
+    for(int i=0; i<gru1_state.size(); i++){
+        EXPECT_EQ(gru1_output[i+3], gru1_state[i]);
+        //EXPECT_LT(gru1_output[i+3] - gru1_state[i], eps);
+    }
+}
+
 /*
 int main(){
     std::vector<float> fc_input(fc.nb_inputs, 0.5);

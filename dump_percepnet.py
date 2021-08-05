@@ -60,12 +60,23 @@ def dump_fc_module(self, f, name):
             .format(name, name, name, weight.shape[1], weight.shape[0], activation))
 Sequential.dump_data = dump_fc_module
 
+def convert_gru_input_kernel(kernel):
+    kernel_r, kernel_z, kernel_h = np.vsplit(kernel, 3)
+    kernels = [kernel_z, kernel_r, kernel_h]
+    return torch.tensor(np.hstack([k.reshape(k.T.shape) for k in kernels]))
+
+def convert_gru_recurrent_kernel(kernel):
+    kernel_r, kernel_z, kernel_h = np.vsplit(kernel, 3)
+    kernels = [kernel_z, kernel_r, kernel_h]
+    return torch.tensor(np.hstack(kernels))
+
 def dump_gru_module(self, f, name):
     print("printing layer " + name )
-    weights = self.weight_ih_l0
+    weights = convert_gru_input_kernel(self.weight_ih_l0.detach().numpy())
+    recurrent_weights = convert_gru_recurrent_kernel(self.weight_hh_l0.detach().numpy())
     bias = torch.cat((self.bias_ih_l0, self.bias_hh_l0),-1)
-    printVector(f, torch.transpose(weights, 0, 1), name + '_weights')
-    printVector(f, torch.transpose(self.weight_ih_l0, 0, 1), name + '_recurrent_weights')
+    printVector(f, weights, name + '_weights')
+    printVector(f, recurrent_weights, name + '_recurrent_weights')
     printVector(f, bias, name + '_bias')
     if hasattr(self, 'activation'):
         activation = self.activation.__name__.upper()
