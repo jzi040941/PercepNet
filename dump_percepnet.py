@@ -120,7 +120,7 @@ if __name__ == '__main__':
         cfile = sys.argv[2]
         #hfile = sys.argv[3];
     else:
-        cfile = 'src/nnet_data.c'
+        cfile = 'src/nnet_data.cpp'
         #hfile = 'nnet_data.h'
 
     f = open(cfile, 'w')
