@@ -51,10 +51,10 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   compute_conv1d(rnn->model->second_conv1d, second_conv1d_out/*512*/, rnn->second_conv1d_state, first_conv1d_out);
   
   //align 3 conv data
-  RNN_MOVE(rnn->convout_buf, &rnn->convout_buf[CONV_DIM], CONVOUT_BUF_SIZE-CONV_DIM);
-  RNN_COPY(&rnn->convout_buf[CONVOUT_BUF_SIZE-CONV_DIM], rnn->second_conv1d_state, CONV_DIM);
+  //RNN_MOVE(rnn->convout_buf, &rnn->convout_buf[CONV_DIM], CONVOUT_BUF_SIZE-CONV_DIM);
+  //RNN_COPY(&rnn->convout_buf[CONVOUT_BUF_SIZE-CONV_DIM], rnn->second_conv1d_state, CONV_DIM);
   //T-3 convout input for gru1
-  compute_gru(rnn->model->gru1, rnn->gru1_state, rnn->convout_buf);
+  compute_gru(rnn->model->gru1, rnn->gru1_state, second_conv1d_out);
   compute_gru(rnn->model->gru2, rnn->gru2_state, rnn->gru1_state);
   compute_gru(rnn->model->gru3, rnn->gru3_state, rnn->gru2_state);
   
@@ -63,12 +63,12 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   compute_gru(rnn->model->gb_gru, rnn->gb_gru_state, rnn->gru3_state);
 
   //concat for rb gru
-  for (i=0;i<CONV_DIM;i++) rb_gru_input[i] = rnn->convout_buf[i];
+  for (i=0;i<CONV_DIM;i++) rb_gru_input[i] = second_conv1d_out[i];
   for (i=0;i<CONV_DIM;i++) rb_gru_input[i+CONV_DIM] = rnn->gru3_state[i];
   compute_gru(rnn->model->rb_gru, rnn->rb_gru_state, rb_gru_input);
   
   //concat for gb denseW
-  for (i=0;i<CONV_DIM;i++) gb_dense_input[i] = rnn->convout_buf[i];
+  for (i=0;i<CONV_DIM;i++) gb_dense_input[i] = second_conv1d_out[i];
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i+CONV_DIM] = rnn->gru1_state[i];
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i+2*CONV_DIM] = rnn->gru2_state[i];
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i+3*CONV_DIM] = rnn->gru3_state[i];
@@ -76,18 +76,5 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   compute_dense(rnn->model->gb_output, gains, gb_dense_input);
 
   compute_dense(rnn->model->rb_output, strengths, rnn->rb_gru_state);
-  /*
-  compute_gru(rnn->model->vad_gru, rnn->vad_gru_state, dense_out);
-  compute_dense(rnn->model->vad_output, vad, rnn->vad_gru_state);
-  for (i=0;i<rnn->model->input_dense_size;i++) noise_input[i] = dense_out[i];
-  for (i=0;i<rnn->model->vad_gru_size;i++) noise_input[i+rnn->model->input_dense_size] = rnn->vad_gru_state[i];
-  for (i=0;i<INPUT_SIZE;i++) noise_input[i+rnn->model->input_dense_size+rnn->model->vad_gru_size] = input[i];
-  compute_gru(rnn->model->noise_gru, rnn->noise_gru_state, noise_input);
 
-  for (i=0;i<rnn->model->vad_gru_size;i++) denoise_input[i] = rnn->vad_gru_state[i];
-  for (i=0;i<rnn->model->noise_gru_size;i++) denoise_input[i+rnn->model->vad_gru_size] = rnn->noise_gru_state[i];
-  for (i=0;i<INPUT_SIZE;i++) denoise_input[i+rnn->model->vad_gru_size+rnn->model->noise_gru_size] = input[i];
-  compute_gru(rnn->model->denoise_gru, rnn->denoise_gru_state, denoise_input);
-  compute_dense(rnn->model->denoise_output, gains, rnn->denoise_gru_state);
-  */
 }
