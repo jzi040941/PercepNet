@@ -37,7 +37,7 @@
 #define CEPS_MEM 8
 #define NB_DELTA_CEPS 6
 
-#define NB_FEATURES (NB_BANDS+3*NB_DELTA_CEPS+2)
+#define NB_FEATURES (NB_BANDS*2+2)
 
 
 #ifndef TRAINING
@@ -436,12 +436,29 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
   */
 }
 
+static void create_features(float* Ey_lookahead, float* pitch_coh, float T, float pitchcorr, float* features){
+  RNN_COPY(&features[0], Ey_lookahead, NB_BANDS);
+  RNN_COPY(&features[NB_BANDS], pitch_coh, NB_BANDS);
+  features[68] = T;
+  features[69] = pitchcorr;
+}
+
+static void compute_lookahead_band_energy(DenoiseState *st, float *Ey_ahead){
+  float y[WINDOW_SIZE];
+  kiss_fft_cpx Y[WINDOW_SIZE];
+  RNN_COPY(y, &st->comb_buf[COMB_BUF_SIZE-WINDOW_SIZE], WINDOW_SIZE);
+  
+  apply_window(y);
+  forward_transform(Y, y);
+  compute_band_energy(Ey_ahead, Y);
+}
+
 float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   int i;
   kiss_fft_cpx X[FREQ_SIZE];
   kiss_fft_cpx P[WINDOW_SIZE];
   float x[FRAME_SIZE];
-  float Ex[NB_BANDS], Ep[NB_BANDS];
+  float Ex[NB_BANDS], Ep[NB_BANDS], Ex_lookahead[NB_BANDS];
   float Exp[NB_BANDS];
   float features[NB_FEATURES];
   float g[NB_BANDS];
@@ -455,6 +472,10 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
   silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
 
+  compute_lookahead_band_energy(st,Ex_lookahead);
+  float T = st->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
+  float pitchcorr = st->pitch_corr;
+  create_features(Ex_lookahead,Exp,T,pitchcorr,features);
   compute_rnn(&st->rnn,g,r,features);
   //r will be estimated by dnn
   if(!silence){
@@ -572,7 +593,7 @@ int train(int argc, char **argv) {
   while (1) {
     kiss_fft_cpx X[FREQ_SIZE], Y[FREQ_SIZE], N[FREQ_SIZE], P[FREQ_SIZE];
     kiss_fft_cpx Phat[FREQ_SIZE];/*only for build*/
-    float Ex[NB_BANDS], Ey[NB_BANDS], En[NB_BANDS], Ep[NB_BANDS];
+    float Ex[NB_BANDS], Ey[NB_BANDS], En[NB_BANDS], Ep[NB_BANDS], Ey_lookahead[NB_BANDS];
     float Ephat[NB_BANDS], Ephaty[NB_BANDS]; /*only for build*/
     float Exp[NB_BANDS], Eyp[NB_BANDS], Ephatp[NB_BANDS];
     float Ln[NB_BANDS];
@@ -659,8 +680,10 @@ int train(int argc, char **argv) {
     fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
     #endif
 
+    compute_lookahead_band_energy(noisy,Ey_lookahead);
     //fwrite(features, sizeof(float), NB_FEATURES, stdout);
-    fwrite(Ey, sizeof(float), NB_BANDS, f3);//Y(l+M)
+    //fwrite(Ey, sizeof(float), NB_BANDS, f3);//Y(l+M)
+    fwrite(Ey_lookahead, sizeof(float), NB_BANDS, f3);//Y(l+M)
     fwrite(Ephaty, sizeof(float), NB_BANDS, f3);//pitch coherence
     
     float T = noisy->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
