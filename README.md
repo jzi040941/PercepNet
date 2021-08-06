@@ -37,12 +37,12 @@ cd ..
 
 3. feature generation for training with sampleData
 ```
-src/PercetNet sampledata/speech/speech.pcm sampledata/noise/noise.pcm 4000 test.output
+bin/src/percepNet sampledata/speech/speech.pcm sampledata/noise/noise20db.raw 4000 test.output
 ```
 
 4. Convert output binary to h5
 ```
-python3 bin2h5.py test.output training.h5
+python3 utils/bin2h5.py test.output training.h5
 ```
 
 5. Training
