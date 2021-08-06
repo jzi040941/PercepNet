@@ -45,7 +45,7 @@
 #endif
 
 #ifndef TEST
-#define TEST 0
+#define TEST 1
 #endif
 
 static const opus_int16 eband5ms[] = {
@@ -564,6 +564,7 @@ int train(int argc, char **argv) {
   FILE *f1, *f2, *f3;
   #ifdef TEST
   FILE *f4;
+  FILE *f5;
   float out[FRAME_SIZE];
   short out_short[FRAME_SIZE];
   float gf[FREQ_SIZE]={1};
@@ -584,6 +585,7 @@ int train(int argc, char **argv) {
   f3 = fopen(argv[4], "wb");
   #ifdef TEST 
   f4 = fopen("test_output.pcm", "wb");
+  f5 = fopen("test_input.pcm","wb");
   #endif
   maxCount = atoi(argv[3]);
   for(i=0;i<150;i++) {
@@ -649,6 +651,9 @@ int train(int argc, char **argv) {
     biquad(n, mem_hp_n, n, b_hp, a_hp, FRAME_SIZE);
     biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
     for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
+    #ifdef TEST
+    fwrite(xn, sizeof(short), FRAME_SIZE, f5);
+    #endif
     //frame_analysis(st, , Ey, x);
     //frame_analysis(noise_state, N, En, n);
     //for (i=0;i<NB_BANDS;i++) Ln[i] = log10(1e-2+En[i]);
@@ -702,6 +707,7 @@ int train(int argc, char **argv) {
   fclose(f3);
   #ifdef TEST
   fclose(f4);
+  fclose(f5);
   #endif
   return 0;
 }//
