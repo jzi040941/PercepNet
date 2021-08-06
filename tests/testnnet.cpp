@@ -23,7 +23,7 @@ TEST(TestNnet, fcCheck) {
     
     for(int i=0; i<fc_output_c.size(); i++){
         //EXPECT_EQ(fc_output[i], fc_output_c[i]);
-        EXPECT_LT(fc_output[i] - fc_output_c[i], eps);
+        EXPECT_LT(std::abs(fc_output[i] - fc_output_c[i]), eps);
     }
 }
 
@@ -37,12 +37,12 @@ TEST(TestNnet, conv1dCheck) {
     //EXPECT_EQ(conv1_output_c.size(), sizeof(conv1_output)/sizeof(float));
     for(int i=0; i<conv1_output_c.size(); i++){
         //EXPECT_EQ(conv1_output[i], conv1_output_c[i]);
-        EXPECT_LT(conv1_output[i] - conv1_output_c[i], eps);
+        EXPECT_LT(std::abs(conv1_output[i] - conv1_output_c[i]), eps);
     }
     compute_conv1d(&conv1, &conv1_output_c[0], &first_conv1d_state[0], &conv1_input[0]);
     for(int i=0; i<conv1_output_c.size(); i++){
         //EXPECT_EQ(conv1_output[i+3], conv1_output_c[i]);
-        EXPECT_LT(conv1_output[i+3] - conv1_output_c[i], eps);
+        EXPECT_LT(std::abs(conv1_output[i+3] - conv1_output_c[i]), eps);
     }
 }
 
