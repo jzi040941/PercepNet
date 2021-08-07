@@ -9,7 +9,7 @@ class PercepNet(nn.Module):
         super(PercepNet, self).__init__()
         
         self.fc = nn.Sequential(nn.Linear(2, 3), nn.Sigmoid())
-        self.conv1 = nn.Conv1d(2, 3, 3, stride=1, padding=1)
+        self.conv1 = nn.Sequential(nn.Conv1d(2, 3, 3, stride=1, padding=1), nn.Sigmoid())
         self.gru1 = nn.GRU(2, 3, 1, batch_first=True)
 
 if __name__ == '__main__':
