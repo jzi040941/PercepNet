@@ -46,9 +46,9 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   float second_conv1d_out[CONV_DIM];
   float gb_dense_input[CONV_DIM*5];
   float rb_gru_input[CONV_DIM*2];
-  compute_dense(rnn->model->input_dense, dense_out, input);
-  compute_conv1d(rnn->model->first_conv1d, first_conv1d_out/*512*/, rnn->first_conv1d_state, dense_out);
-  compute_conv1d(rnn->model->second_conv1d, second_conv1d_out/*512*/, rnn->second_conv1d_state, first_conv1d_out);
+  compute_dense(rnn->model->fc, dense_out, input);
+  compute_conv1d(rnn->model->conv1, first_conv1d_out/*512*/, rnn->first_conv1d_state, dense_out);
+  compute_conv1d(rnn->model->conv2, second_conv1d_out/*512*/, rnn->second_conv1d_state, first_conv1d_out);
   
   //align 3 conv data
   //RNN_MOVE(rnn->convout_buf, &rnn->convout_buf[CONV_DIM], CONVOUT_BUF_SIZE-CONV_DIM);

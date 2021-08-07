@@ -4,11 +4,11 @@
 #include "nnet.h"
 
 typedef struct RNNModel {
-  const DenseLayer *input_dense;
+  const DenseLayer *fc;
 
-  const Conv1DLayer *first_conv1d;
+  const Conv1DLayer *conv1;
   
-  const Conv1DLayer *second_conv1d;
+  const Conv1DLayer *conv2;
   
   const GRULayer *gru1;
 
