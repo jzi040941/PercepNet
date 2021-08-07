@@ -38,7 +38,7 @@
 #define NB_DELTA_CEPS 6
 
 #define NB_FEATURES (NB_BANDS*2+2)
-
+#define NORM_RATIO 32768
 
 #ifndef TRAINING
 #define TRAINING 0
@@ -47,6 +47,8 @@
 #ifndef TEST
 #define TEST 1
 #endif
+
+extern const struct RNNModel percepnet_model_orig;
 
 static const opus_int16 eband5ms[] = {
 /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 20k*/
@@ -220,14 +222,16 @@ int rnnoise_init(DenoiseState *st, RNNModel *model) {
   
   if (model){
     st->rnn.model = model;
-    st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
-    st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
-    st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
-    st->rnn.gru2_state = (float*)calloc(sizeof(float), st->rnn.model->gru2->nb_neurons);
-    st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
-    st->rnn.gb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gb_gru->nb_neurons);
-    st->rnn.rb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->rb_gru->nb_neurons);
   }
+
+  st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
+  st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
+  st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
+  st->rnn.gru2_state = (float*)calloc(sizeof(float), st->rnn.model->gru2->nb_neurons);
+  st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
+  st->rnn.gb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gb_gru->nb_neurons);
+  st->rnn.rb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->rb_gru->nb_neurons);
+  
   return 0;
 }
 
@@ -603,6 +607,7 @@ int train(int argc, char **argv) {
     float g[NB_BANDS];
     float r[NB_BANDS];
     short tmp[FRAME_SIZE];
+    float norm_tmp[FRAME_SIZE];
     float vad=0;
     float E=0;
     if (count==maxCount) break;
@@ -630,9 +635,9 @@ int train(int argc, char **argv) {
         rewind(f1);
         fread(tmp, sizeof(short), FRAME_SIZE, f1);
       }
-      for (i=0;i<FRAME_SIZE;i++) tmp[i] /= 32768;
-      for (i=0;i<FRAME_SIZE;i++) x[i] = speech_gain*tmp[i];
-      for (i=0;i<FRAME_SIZE;i++) E += tmp[i]*(float)tmp[i];
+      for (i=0;i<FRAME_SIZE;i++) norm_tmp[i] = (float)tmp[i]/NORM_RATIO;
+      for (i=0;i<FRAME_SIZE;i++) x[i] = speech_gain*norm_tmp[i];
+      for (i=0;i<FRAME_SIZE;i++) E += norm_tmp[i]*(float)norm_tmp[i];
     } else {
       for (i=0;i<FRAME_SIZE;i++) x[i] = 0;
       E = 0;
@@ -643,8 +648,8 @@ int train(int argc, char **argv) {
         rewind(f2);
         fread(tmp, sizeof(short), FRAME_SIZE, f2);
       }
-      for (i=0;i<FRAME_SIZE;i++) tmp[i] /= 32768;
-      for (i=0;i<FRAME_SIZE;i++) n[i] = noise_gain*tmp[i];
+      for (i=0;i<FRAME_SIZE;i++) norm_tmp[i] = (float)tmp[i]/NORM_RATIO;
+      for (i=0;i<FRAME_SIZE;i++) n[i] = noise_gain*norm_tmp[i];
     } else {
       for (i=0;i<FRAME_SIZE;i++) n[i] = 0;
     }
@@ -654,7 +659,10 @@ int train(int argc, char **argv) {
     biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
     for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
     #ifdef TEST
-    fwrite(xn, sizeof(short), FRAME_SIZE, f5);
+    for(int i=0; i<FRAME_SIZE; i++){
+      out_short[i] = (short)fmax(-32768,fmin(32767, xn[i]*NORM_RATIO));
+    }
+    fwrite(out_short, sizeof(short), FRAME_SIZE, f5);
     #endif
     //frame_analysis(st, , Ey, x);
     //frame_analysis(noise_state, N, En, n);
@@ -682,7 +690,7 @@ int train(int argc, char **argv) {
     
     frame_synthesis(st, out, Y);
     for(int i=0; i<FRAME_SIZE; i++){
-      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*32768));
+      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*NORM_RATIO));
     }
     fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
     #endif
