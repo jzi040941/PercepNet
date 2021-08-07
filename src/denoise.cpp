@@ -220,8 +220,8 @@ int rnnoise_init(DenoiseState *st, RNNModel *model) {
   
   if (model){
     st->rnn.model = model;
-    st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->first_conv1d->kernel_size*st->rnn.model->first_conv1d->nb_inputs);
-    st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->second_conv1d->kernel_size*st->rnn.model->second_conv1d->nb_inputs);
+    st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
+    st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
     st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
     st->rnn.gru2_state = (float*)calloc(sizeof(float), st->rnn.model->gru2->nb_neurons);
     st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
@@ -630,6 +630,7 @@ int train(int argc, char **argv) {
         rewind(f1);
         fread(tmp, sizeof(short), FRAME_SIZE, f1);
       }
+      for (i=0;i<FRAME_SIZE;i++) tmp[i] /= 32768;
       for (i=0;i<FRAME_SIZE;i++) x[i] = speech_gain*tmp[i];
       for (i=0;i<FRAME_SIZE;i++) E += tmp[i]*(float)tmp[i];
     } else {
@@ -642,6 +643,7 @@ int train(int argc, char **argv) {
         rewind(f2);
         fread(tmp, sizeof(short), FRAME_SIZE, f2);
       }
+      for (i=0;i<FRAME_SIZE;i++) tmp[i] /= 32768;
       for (i=0;i<FRAME_SIZE;i++) n[i] = noise_gain*tmp[i];
     } else {
       for (i=0;i<FRAME_SIZE;i++) n[i] = 0;
@@ -680,7 +682,7 @@ int train(int argc, char **argv) {
     
     frame_synthesis(st, out, Y);
     for(int i=0; i<FRAME_SIZE; i++){
-      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]));
+      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*32768));
     }
     fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
     #endif
