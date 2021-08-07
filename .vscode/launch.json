@@ -32,6 +32,28 @@
             "preLaunchTask": "C/C++: g++ build active file",
             "miDebuggerPath": "/usr/bin/gdb",
             
+        },
+        {
+            "name": "C/C++: g++ build active file(PercepNet_run)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/PercepNet_run",
+            "args": ["${fileDirname}/../test_input.pcm", "${fileDirname}/../test_dnn_output.pcm"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [ { "name": "ENABLE_ASSERTIONS", "value": "1" }],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C/C++: g++ build active file(PercepNet_run)",
+            "miDebuggerPath": "/usr/bin/gdb",
+            
         }
     ]
 }
