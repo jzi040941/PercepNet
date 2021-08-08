@@ -16,14 +16,14 @@ typedef struct RNNModel {
 
   const GRULayer *gru3;
 
-  const GRULayer *gb_gru;
+  const GRULayer *gru_gb;
 
-  const GRULayer *rb_gru;
+  const GRULayer *gru_rb;
 
-  const DenseLayer *gb_output;
+  const DenseLayer *fc_gb;
 
-  const DenseLayer *rb_output;
-} RNNModel;
+  const DenseLayer *fc_rb;
+}RNNModel;
 
 typedef struct RNNState {
   const RNNModel *model;

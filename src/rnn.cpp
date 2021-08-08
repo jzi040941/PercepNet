@@ -60,12 +60,12 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   
   //for temporary input for gb_gru and rb_gru is gru3_state
   //but it might be need concat convout_buf through gru1,2,3_state
-  compute_gru(rnn->model->gb_gru, rnn->gb_gru_state, rnn->gru3_state);
+  compute_gru(rnn->model->gru_gb, rnn->gb_gru_state, rnn->gru3_state);
 
   //concat for rb gru
   for (i=0;i<CONV_DIM;i++) rb_gru_input[i] = second_conv1d_out[i];
   for (i=0;i<CONV_DIM;i++) rb_gru_input[i+CONV_DIM] = rnn->gru3_state[i];
-  compute_gru(rnn->model->rb_gru, rnn->rb_gru_state, rb_gru_input);
+  compute_gru(rnn->model->gru_rb, rnn->rb_gru_state, rb_gru_input);
   
   //concat for gb denseW
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i] = second_conv1d_out[i];
@@ -73,8 +73,8 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i+2*CONV_DIM] = rnn->gru2_state[i];
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i+3*CONV_DIM] = rnn->gru3_state[i];
   for (i=0;i<CONV_DIM;i++) gb_dense_input[i+4*CONV_DIM] = rnn->gb_gru_state[i];
-  compute_dense(rnn->model->gb_output, gains, gb_dense_input);
+  compute_dense(rnn->model->fc_gb, gains, gb_dense_input);
 
-  compute_dense(rnn->model->rb_output, strengths, rnn->rb_gru_state);
+  compute_dense(rnn->model->fc_rb, strengths, rnn->rb_gru_state);
 
 }

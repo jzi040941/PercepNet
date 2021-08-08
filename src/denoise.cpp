@@ -48,7 +48,7 @@
 #define TEST 1
 #endif
 
-extern const struct RNNModel percepnet_model_orig;
+extern const RNNModel percepnet_model_orig;
 
 static const opus_int16 eband5ms[] = {
 /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 20k*/
@@ -220,18 +220,21 @@ DenoiseState *rnnoise_create(RNNModel *model) {
 int rnnoise_init(DenoiseState *st, RNNModel *model) {
   memset(st, 0, sizeof(*st));
   
-  if (model){
+  if (model)
     st->rnn.model = model;
-  }
-
-  st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
-  st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
-  st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
-  st->rnn.gru2_state = (float*)calloc(sizeof(float), st->rnn.model->gru2->nb_neurons);
-  st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
-  st->rnn.gb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gb_gru->nb_neurons);
-  st->rnn.rb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->rb_gru->nb_neurons);
+  else
+    st->rnn.model = &percepnet_model_orig;
   
+  if(!TRAINING)
+  {    
+    st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
+    st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
+    st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
+    st->rnn.gru2_state = (float*)calloc(sizeof(float), st->rnn.model->gru2->nb_neurons);
+    st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
+    st->rnn.gb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gru_gb->nb_neurons);
+    st->rnn.rb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gru_rb->nb_neurons);
+  }
   return 0;
 }
 
