@@ -11,7 +11,8 @@ class PercepNet(nn.Module):
         self.fc = nn.Sequential(nn.Linear(2, 3), nn.Sigmoid())
         self.conv1 = nn.Sequential(nn.Conv1d(2, 3, 3, stride=1, padding=1), nn.Sigmoid())
         self.gru1 = nn.GRU(2, 3, 1, batch_first=True)
-
+        self.gru1.bias_ih_l0.data.fill_(0)
+        self.gru1.bias_hh_l0.data.fill_(0)
 if __name__ == '__main__':
     model = PercepNet()
 
@@ -31,5 +32,13 @@ if __name__ == '__main__':
             output = output[0]
         if len(output.size())>2:
             output = torch.transpose(output, 1, 2)
+        if isinstance(module,nn.GRU):
+            output = torch.transpose(output, 1, 2)
         printVector(f, output, name+"_output")
+    
+    
+    #f.write('extern const struct RNNModel percepnet_model_orig = {\n')
+    #for name, module in model.named_children():
+    #        f.write('    &{},\n'.format(name))
+    #f.write('};\n')
     

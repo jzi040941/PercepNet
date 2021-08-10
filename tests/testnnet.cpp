@@ -15,6 +15,7 @@ TEST(TestNnet, BasicAssertions) {
 */
 
 
+
 TEST(TestNnet, fcCheck) {
     float eps = 1e-5;
     std::vector<float> fc_input(fc.nb_inputs, 0.5);
@@ -63,6 +64,7 @@ TEST(TestNnet, gruCheck) {
         //EXPECT_LT(gru1_output[i+3] - gru1_state[i], eps);
     }
 }
+
 
 /*
 int main(){
