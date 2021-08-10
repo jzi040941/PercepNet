@@ -40,15 +40,16 @@
 #define NB_FEATURES (NB_BANDS*2+2)
 #define NORM_RATIO 32768
 
-#ifndef TRAINING
-#define TRAINING 0
-#endif
-
 #ifndef TEST
 #define TEST 1
 #endif
 
+#ifndef TRAINING
 extern const RNNModel percepnet_model_orig;
+#endif
+
+int lowpass = FREQ_SIZE;
+int band_lp = NB_BANDS;
 
 static const opus_int16 eband5ms[] = {
 /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 20k*/
@@ -223,10 +224,9 @@ int rnnoise_init(DenoiseState *st, RNNModel *model) {
   if (model)
     st->rnn.model = model;
   else
+  {
+    #ifndef TRAINING
     st->rnn.model = &percepnet_model_orig;
-  
-  if(!TRAINING)
-  {    
     st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
     st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
     st->rnn.gru1_state = (float*)calloc(sizeof(float), st->rnn.model->gru1->nb_neurons);
@@ -234,7 +234,10 @@ int rnnoise_init(DenoiseState *st, RNNModel *model) {
     st->rnn.gru3_state = (float*)calloc(sizeof(float), st->rnn.model->gru3->nb_neurons);
     st->rnn.gb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gru_gb->nb_neurons);
     st->rnn.rb_gru_state = (float*)calloc(sizeof(float), st->rnn.model->gru_rb->nb_neurons);
+    #endif
+
   }
+  
   return 0;
 }
 
@@ -545,9 +548,6 @@ static void rand_resp(float *a, float *b) {
   b[0] = .75*uni_rand();
   b[1] = .75*uni_rand();
 }
-
-int lowpass = FREQ_SIZE;
-int band_lp = NB_BANDS;
 
 int train(int argc, char **argv) {
   int i;

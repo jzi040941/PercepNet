@@ -5,11 +5,17 @@ file(GLOB_RECURSE SOURCES LIST_DIRECTORIES true *.h *.cpp)
 set(SOURCES ${SOURCES})
 
 add_executable(${BINARY} ${SOURCES})
-add_executable(${BINARY}_run ${SOURCES})
 set_target_properties(
-    ${BINARY}_run
+    ${BINARY}
     PROPERTIES
-    COMPILE_DEFINITIONS TRAINING=0
-)
+    COMPILE_DEFINITIONS TRAINING=1
+    )
+if(EXISTS "${PROJECT_SOURCE_DIR}/nnet_data.cpp")
+    add_executable(${BINARY}_run ${SOURCES})
+else()
+    message([WARNING] "nnet_data.cpp is not exist. Do not generate inference executable" ...)
+endif()
+
+
 
 add_library(${BINARY}_lib STATIC ${SOURCES})

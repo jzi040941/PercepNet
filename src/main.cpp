@@ -5,7 +5,7 @@
 
 //using namespace std;
 #ifndef TRAINING
-#define TRAINING 1
+#define TRAINING 0
 #endif
 
 int main(int argc, char **argv)
