@@ -143,3 +143,6 @@ __pycache__/
 *.exe
 src/*.pcm
 *.wav
+
+#binary folder
+bin/

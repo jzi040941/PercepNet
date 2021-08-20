@@ -55,13 +55,13 @@ TEST(TestNnet, gruCheck) {
     compute_gru(&gru1,&gru1_state[0], &gru1_input[0]);
 
     for(int i=0; i<gru1_state.size(); i++){
-        EXPECT_EQ(gru1_output[i], gru1_state[i]);
-        //EXPECT_LT(gru1_output[i] - gru1_state[i], eps);
+        //EXPECT_FLOAT_EQ(gru1_output[i], gru1_state[i]);
+        EXPECT_LT(gru1_output[i] - gru1_state[i], eps);
     }
     compute_gru(&gru1,&gru1_state[0], &gru1_input[0]);
     for(int i=0; i<gru1_state.size(); i++){
-        EXPECT_EQ(gru1_output[i+3], gru1_state[i]);
-        //EXPECT_LT(gru1_output[i+3] - gru1_state[i], eps);
+        //EXPECT_FLOAT_EQ(gru1_output[i+3], gru1_state[i]);
+        EXPECT_LT(gru1_output[i+3] - gru1_state[i], eps);
     }
 }
 

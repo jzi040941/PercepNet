@@ -13,6 +13,7 @@ class PercepNet(nn.Module):
         self.gru1 = nn.GRU(2, 3, 1, batch_first=True)
         self.gru1.bias_ih_l0.data.fill_(0)
         self.gru1.bias_hh_l0.data.fill_(0)
+        
 if __name__ == '__main__':
     model = PercepNet()
 
@@ -30,9 +31,7 @@ if __name__ == '__main__':
         output = module(testdata)
         if isinstance(output, tuple) :
             output = output[0]
-        if len(output.size())>2:
-            output = torch.transpose(output, 1, 2)
-        if isinstance(module,nn.GRU):
+        if len(output.size())>2 and not isinstance(module,nn.GRU):
             output = torch.transpose(output, 1, 2)
         printVector(f, output, name+"_output")
     
