@@ -68,18 +68,23 @@ Linear.dump_data = dump_linear_module
 def convert_gru_input_kernel(kernel):
     kernel_r, kernel_z, kernel_h = np.vsplit(kernel, 3)
     kernels = [kernel_z, kernel_r, kernel_h]
-    return torch.tensor(np.hstack([k.reshape(k.T.shape) for k in kernels]))
+    return torch.tensor(np.hstack([k.T for k in kernels]))
 
 def convert_gru_recurrent_kernel(kernel):
     kernel_r, kernel_z, kernel_h = np.vsplit(kernel, 3)
     kernels = [kernel_z, kernel_r, kernel_h]
-    return torch.tensor(np.hstack(kernels))
+    return torch.tensor(np.hstack([k.T for k in kernels]))
+
+def convert_bias(bias):
+    bias = bias.reshape(2, 3, -1) 
+    return torch.tensor(bias[:, [1, 0, 2], :].reshape(-1))
 
 def dump_gru_module(self, f, name):
     print("printing layer " + name )
     weights = convert_gru_input_kernel(self.weight_ih_l0.detach().numpy())
     recurrent_weights = convert_gru_recurrent_kernel(self.weight_hh_l0.detach().numpy())
-    bias = torch.cat((self.bias_ih_l0, self.bias_hh_l0),-1)
+    bias = torch.cat((self.bias_ih_l0, self.bias_hh_l0))
+    bias = convert_bias(bias.detach().numpy())
     printVector(f, weights, name + '_weights')
     printVector(f, recurrent_weights, name + '_recurrent_weights')
     printVector(f, bias, name + '_bias')
@@ -93,8 +98,10 @@ def dump_gru_module(self, f, name):
         reset_after = 1
     neurons = weights.shape[0]//3
     #max_rnn_neurons = max(max_rnn_neurons, neurons)
+    print('const GRULayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}_recurrent_weights,\n   {}, {}, ACTIVATION_{}, {}\n}};\n\n'
+            .format(name, name, name, name, weights.shape[0], weights.shape[1]//3, activation, reset_after))
     f.write('const GRULayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}_recurrent_weights,\n   {}, {}, ACTIVATION_{}, {}\n}};\n\n'
-            .format(name, name, name, name, weights.shape[1], weights.shape[0]//3, activation, reset_after))
+            .format(name, name, name, name, weights.shape[0], weights.shape[1]//3, activation, reset_after))
     #hf.write('#define {}_OUT_SIZE {}\n'.format(name.upper(), weights[0].shape[1]//3))
     #hf.write('#define {}_STATE_SIZE {}\n'.format(name.upper(), weights[0].shape[1]//3))
     #hf.write('extern const GRULayer {};\n\n'.format(name))
@@ -108,6 +115,8 @@ def dump_conv1d_module(self, f, name, activation):
     #activation = self.activation.__name__.upper()
     #max_conv_inputs = max(max_conv_inputs, weights[0].shape[1]*weights[0].shape[0])
     #warn! activation hard codedW
+    print('const Conv1DLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, {}, ACTIVATION_{}\n}};\n\n'
+            .format(name, name, name, weights.shape[1], weights.shape[2], weights.shape[0], activation))
     f.write('const Conv1DLayer {} = {{\n   {}_bias,\n   {}_weights,\n   {}, {}, {}, ACTIVATION_{}\n}};\n\n'
             .format(name, name, name, weights.shape[1], weights.shape[2], weights.shape[0], activation))
     #hf.write('#define {}_OUT_SIZE {}\n'.format(name.upper(), weights[0].shape[2]))
@@ -136,6 +145,11 @@ if __name__ == '__main__':
 
     for name, module in model.named_children():
         module.dump_data(f, name)
+
+    f.write('extern const RNNModel percepnet_model_orig = {\n')
+    for name, module in model.named_children():
+            f.write('    &{},\n'.format(name))
+    f.write('};\n')
 
     f.close()
     print("done")
