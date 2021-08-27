@@ -10,7 +10,7 @@ set_target_properties(
     PROPERTIES
     COMPILE_DEFINITIONS TRAINING=1
     )
-if(EXISTS "${PROJECT_SOURCE_DIR}/nnet_data.cpp")
+if(EXISTS "${PROJECT_SOURCE_DIR}/src/nnet_data.cpp")
     add_executable(${BINARY}_run ${SOURCES})
 else()
     message([WARNING] "nnet_data.cpp is not exist. Do not generate inference executable" ...)

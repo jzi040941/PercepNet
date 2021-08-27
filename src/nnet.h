@@ -29,7 +29,7 @@
 #define _NNET_H_
 
 #define WEIGHTS_SCALE (1.f/256)
-#define MAX_NEURONS 128
+#define MAX_NEURONS 512
 #define MAX_CONV_INPUTS 1536
 
 #define ACTIVATION_LINEAR  0

@@ -44,7 +44,7 @@
 #define TEST 1
 #endif
 
-#ifndef TRAINING
+#if !TRAINING
 extern const RNNModel percepnet_model_orig;
 #endif
 
@@ -225,7 +225,7 @@ int rnnoise_init(DenoiseState *st, RNNModel *model) {
     st->rnn.model = model;
   else
   {
-    #ifndef TRAINING
+    #if !TRAINING
     st->rnn.model = &percepnet_model_orig;
     st->rnn.first_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv1->kernel_size*st->rnn.model->conv1->nb_inputs);
     st->rnn.second_conv1d_state = (float*)calloc(sizeof(float), st->rnn.model->conv2->kernel_size*st->rnn.model->conv2->nb_inputs);
