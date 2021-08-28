@@ -491,6 +491,12 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   if(!silence){
   pitch_filter(X, P, Ex, Ep, Exp, g, r);
   }
+  interp_band_gain(gf, g);
+    
+  for (i=0;i<FREQ_SIZE;i++) {
+    X[i].r *= gf[i];
+    X[i].i *= gf[i];
+  }
   frame_synthesis(st, out, X);
   return 0;
 };
