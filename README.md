@@ -56,7 +56,13 @@ python3 dump_percepnet.py model.pt
 ```
 
 7. Inference(WIP)
-...
+```
+cd bin
+cmake ..
+make -j1
+cd ..
+bin/src/percepNet_run test_input.pcm percepnet_output.pcm
+```
 
 ## SampleData
 
