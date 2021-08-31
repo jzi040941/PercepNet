@@ -56,7 +56,7 @@ python3 rnn_train.py
 python3 dump_percepnet.py model.pt
 ```
 
-7. Inference(WIP)
+7. Inference
 ```
 cd bin
 cmake ..
