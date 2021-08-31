@@ -1,4 +1,4 @@
-# PercepNet(Work In Progress)
+# PercepNet
 Unofficial implementation of PercepNet: A Perceptually-Motivated Approach for Low-Complexity, Real-Time Enhancement of Fullband Speech described in https://arxiv.org/abs/2008.04259
 
 https://www.researchgate.net/publication/343568932_A_Perceptually-Motivated_Approach_for_Low-Complexity_Real-Time_Enhancement_of_Fullband_Speech
@@ -10,7 +10,8 @@ https://www.researchgate.net/publication/343568932_A_Perceptually-Motivated_Appr
 - [X] ERBBand c++ implementation
 - [X] Feature(r,g,pitch,corr) Generator(c++) for pytorch
 - [X] DNNModel pytorch
-- [ ] DNNModel c++ implementation
+- [X] DNNModel c++ implementation
+- [ ] Pretrained model
 - [ ] Postfiltering
 
 
