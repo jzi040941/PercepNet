@@ -671,6 +671,7 @@ int train(int argc, char **argv) {
     for(int i=0; i<FRAME_SIZE; i++){
       out_short[i] = (short)fmax(-32768,fmin(32767, xn[i]*NORM_RATIO));
     }
+    xn[i] = (float)out_short[i]/NORM_RATIO;
     fwrite(out_short, sizeof(short), FRAME_SIZE, f5);
     #endif
     //frame_analysis(st, , Ey, x);
@@ -714,9 +715,10 @@ int train(int argc, char **argv) {
     float pitchcorr = noisy->pitch_corr;
     fwrite(&T, sizeof(float), 1, f3);//pitch
     fwrite(&pitchcorr, sizeof(float), 1, f3);//pitch correlation
-    
+
+    fwrite(g, sizeof(float), NB_BANDS, f3);//gain    
     fwrite(r, sizeof(float), NB_BANDS, f3);//filtering strength
-    fwrite(g, sizeof(float), NB_BANDS, f3);//gain
+
     //fwrite(&vad, sizeof(float), 1, stdout);
 
     count++;
