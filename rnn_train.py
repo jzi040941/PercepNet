@@ -3,10 +3,15 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
 import h5py
+import argparse
+from tensorboardX import SummaryWriter
+import matplotlib.pyplot as plt
+import torch.nn.utils.rnn as rnn_utils
 
+plt.switch_backend('agg')
 class h5Dataset(Dataset):
 
-    def __init__(self, h5_filename="training.h5", window_size=500):
+    def __init__(self, h5_filename="training.h5", window_size=200):
         self.window_size = window_size
         self.h5_filename = h5_filename
         self.x_dim = 70
@@ -58,6 +63,7 @@ class PercepNet(nn.Module):
         convout = self.conv2(x)
         convout = convout[:,:,:-2]#align with c++ dnn
         convout = convout.permute([0,2,1]) # B, T, D
+       
         gru1_out, gru1_state = self.gru1(convout)
         gru2_out, gru2_state = self.gru2(gru1_out)
         gru3_out, gru3_state = self.gru3(gru2_out)
@@ -69,7 +75,9 @@ class PercepNet(nn.Module):
         concat_rb_layer = torch.cat((gru3_out,convout),-1)
         rnn_rb_out, gru_rb_state = self.gru_rb(concat_rb_layer)
         rb = self.fc_rb(rnn_rb_out)
-        return gb,rb
+
+        output = torch.cat((gb,rb),-1)
+        return output
 
 def test():
     model = PercepNet()
@@ -85,26 +93,39 @@ class CustomLoss(nn.Module):
         gamma = 0.5
         C4 = 10
         epsi = 1e-10
-        rb_hat = outputs[0]
-        gb_hat = outputs[1]
+        rb_hat = outputs[:,:,:34]
+        gb_hat = outputs[:,:,34:68]
         rb = targets[:,:,:34]
         gb = targets[:,:,34:68]
         
+        '''
+        total_loss=0
+        for i in range(500):
+            total_loss += (torch.sum(torch.pow((torch.pow(gb[:,i,:],gamma) - torch.pow(gb_hat[:,i,:],gamma)),2))) \
+             + C4*torch.sum(torch.pow(torch.pow(gb[:,i,:],gamma) - torch.pow(gb_hat[:,i,:],gamma),4)) \
+             + torch.sum(torch.pow(torch.pow((1-rb[:,i,:]),gamma)-torch.pow((1-rb_hat[:,i,:]),gamma),2))
+        return total_loss
+        '''
         return (torch.mean(torch.pow((torch.pow(gb,gamma) - torch.pow(gb_hat,gamma)),2))) \
              + C4*torch.mean(torch.pow(torch.pow(gb,gamma) - torch.pow(gb_hat,gamma),4)) \
              + torch.mean(torch.pow(torch.pow((1-rb),gamma)-torch.pow((1-rb_hat),gamma),2))
 
+    
+
 def train():
+    parser = argparse.ArgumentParser()
+    writer = SummaryWriter()
+
     UseCustomLoss = True
     dataset = h5Dataset("training.h5")
-    trainset_ratio = 0.8 # 1 - validation set ration
+    trainset_ratio = 1 # 1 - validation set ration
     train_size = int(trainset_ratio * len(dataset))
     test_size = len(dataset) - train_size
-    batch_size=2
+    batch_size=1
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    validation_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    #validation_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     model = PercepNet()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -113,7 +134,7 @@ def train():
         criterion = CustomLoss()
     else:
         criterion = nn.MSELoss()
-    num_epochs = 30
+    num_epochs = 1000
     for epoch in range(num_epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
@@ -142,9 +163,20 @@ def train():
                 print('[%d, %5d] loss: %.3f' %
                     (epoch + 1, i + 1, running_loss / 2000))
                 running_loss = 0.0
-
+       
+        model.eval()
+        tmp_output = model(torch.tensor(dataset[0][0]).unsqueeze(0))
+        model.train()
+        fig = plt.figure()
+        plt.plot(tmp_output[0].squeeze(0).T.detach().numpy())
+        writer.add_figure('output gb', fig, global_step=epoch)
+        fig = plt.figure()
+        plt.plot(dataset[0][1][:,:].T)
+        writer.add_figure('target gb', fig, global_step=epoch)
+        writer.add_scalar('loss', loss.item(), global_step=epoch)
     print('Finished Training')
     print('save model')
+    writer.close()
     torch.save(model.state_dict(), 'model.pt')
 
 if __name__ == '__main__':
