@@ -116,7 +116,7 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   sum[NB_BANDS-1] *= 2;
   for (i=0;i<NB_BANDS;i++)
   {
-    bandE[i] = sum[i];
+    bandE[i] = sqrt(sum[i]);
   }
 }
 
@@ -386,7 +386,7 @@ static int compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cp
   forward_transform(P, p);
   compute_band_energy(Ep, P);
   compute_band_corr(Exp, X, P);
-  for (i=0;i<NB_BANDS;i++) Exp[i] = fmin(1,fmax(0,Exp[i]/sqrt(.001+Ex[i]*Ep[i])));
+  for (i=0;i<NB_BANDS;i++) Exp[i] = fmin(1,fmax(0,Exp[i]/sqrt(1e-15+Ex[i]*Ep[i])));
 
   for (i=0;i<NB_BANDS;i++) {
     E += Ex[i];
@@ -477,9 +477,9 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   float r[NB_BANDS];
   int silence;
   
-  static const float a_hp[2] = {-1.99599, 0.99600};
-  static const float b_hp[2] = {-2, 1};
-  biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
+  //static const float a_hp[2] = {-1.99599, 0.99600};
+  //static const float b_hp[2] = {-2, 1};
+  //biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
   silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
 
   compute_lookahead_band_energy(st,Ex_lookahead);
@@ -670,8 +670,9 @@ int train(int argc, char **argv) {
     #ifdef TEST
     for(int i=0; i<FRAME_SIZE; i++){
       out_short[i] = (short)fmax(-32768,fmin(32767, xn[i]*NORM_RATIO));
+      xn[i] = (float)out_short[i]/NORM_RATIO;
     }
-    xn[i] = (float)out_short[i]/NORM_RATIO;
+    
     fwrite(out_short, sizeof(short), FRAME_SIZE, f5);
     #endif
     //frame_analysis(st, , Ey, x);
