@@ -1,2 +1,6 @@
 librosa
 numpy
+torch
+tensorboardX
+matplotlib
+h5py
