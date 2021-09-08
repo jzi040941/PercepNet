@@ -11,7 +11,7 @@ import torch.nn.utils.rnn as rnn_utils
 plt.switch_backend('agg')
 class h5Dataset(Dataset):
 
-    def __init__(self, h5_filename="training.h5", window_size=200):
+    def __init__(self, h5_filename="training.h5", window_size=500):
         self.window_size = window_size
         self.h5_filename = h5_filename
         self.x_dim = 70
@@ -93,10 +93,10 @@ class CustomLoss(nn.Module):
         gamma = 0.5
         C4 = 10
         epsi = 1e-10
-        rb_hat = outputs[:,:,:34]
-        gb_hat = outputs[:,:,34:68]
-        rb = targets[:,:,:34]
-        gb = targets[:,:,34:68]
+        gb_hat = outputs[:,:,:34]
+        rb_hat = outputs[:,:,34:68]
+        gb = targets[:,:,:34]
+        rb = targets[:,:,34:68]
         
         '''
         total_loss=0
@@ -121,7 +121,7 @@ def train():
     trainset_ratio = 1 # 1 - validation set ration
     train_size = int(trainset_ratio * len(dataset))
     test_size = len(dataset) - train_size
-    batch_size=1
+    batch_size=10
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
     
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -134,7 +134,7 @@ def train():
         criterion = CustomLoss()
     else:
         criterion = nn.MSELoss()
-    num_epochs = 1000
+    num_epochs = 10000
     for epoch in range(num_epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
