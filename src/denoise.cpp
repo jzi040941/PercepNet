@@ -621,6 +621,10 @@ int train(int argc, char **argv) {
     float E=0;
     if (count==maxCount) break;
     //if ((count%1000)==0) fprintf(stderr, "%d\r", count);
+
+    //DNS-Challenge Dataset can generate clean&noise data accroding to SNR,RIR setting
+    //Disable gain change & Ignore lowpass filtering for convenience
+    /*
     if (++gain_change_count > 2821) {
       speech_gain = pow(10., (-40+(rand()%60))/20.);
       noise_gain = pow(10., (-30+(rand()%50))/20.);
@@ -638,6 +642,7 @@ int train(int argc, char **argv) {
         }
       }
     }
+    */
     if (speech_gain != 0) {
       fread(tmp, sizeof(short), FRAME_SIZE, f1);
       if (feof(f1)) {
