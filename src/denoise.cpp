@@ -695,22 +695,21 @@ int train(int argc, char **argv) {
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     #ifdef TEST
-    
-    if(!silence){
-    pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
-    }
-    interp_band_gain(gf, g);
-    
-    for (i=0;i<FREQ_SIZE;i++) {
-      Y[i].r *= gf[i];
-      Y[i].i *= gf[i];
-    }
-    
-    frame_synthesis(st, out, Y);
-    for(int i=0; i<FRAME_SIZE; i++){
-      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*NORM_RATIO));
-    }
-    fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
+      if(!silence){
+      pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
+      }
+      interp_band_gain(gf, g);
+      
+      for (i=0;i<FREQ_SIZE;i++) {
+        Y[i].r *= gf[i];
+        Y[i].i *= gf[i];
+      }
+      
+      frame_synthesis(st, out, Y);
+      for(int i=0; i<FRAME_SIZE; i++){
+        out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*NORM_RATIO));
+      }
+      fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
     #endif
 
     compute_lookahead_band_energy(noisy,Ey_lookahead);
