@@ -590,7 +590,7 @@ int train(int argc, char **argv) {
   noise_state = rnnoise_create(NULL);
   noisy = rnnoise_create(NULL);
   if (argc!=5) {
-    fprintf(stderr, "usage: %s <speech> <noise> <count> <output>\n", argv[0]);
+    fprintf(stderr, "usage: %s <speech> <noisy> <count> <output>\n", argv[0]);
     return 1;
   }
   f1 = fopen(argv[1], "rb");
@@ -621,6 +621,10 @@ int train(int argc, char **argv) {
     float E=0;
     if (count==maxCount) break;
     //if ((count%1000)==0) fprintf(stderr, "%d\r", count);
+
+    //DNS-Challenge Dataset can generate clean&noise data accroding to SNR,RIR setting
+    //Disable gain change & Ignore lowpass filtering for convenience
+    /*
     if (++gain_change_count > 2821) {
       speech_gain = pow(10., (-40+(rand()%60))/20.);
       noise_gain = pow(10., (-30+(rand()%50))/20.);
@@ -638,6 +642,7 @@ int train(int argc, char **argv) {
         }
       }
     }
+    */
     if (speech_gain != 0) {
       fread(tmp, sizeof(short), FRAME_SIZE, f1);
       if (feof(f1)) {
@@ -662,11 +667,13 @@ int train(int argc, char **argv) {
     } else {
       for (i=0;i<FRAME_SIZE;i++) n[i] = 0;
     }
-    biquad(x, mem_hp_x, x, b_hp, a_hp, FRAME_SIZE);
-    biquad(x, mem_resp_x, x, b_sig, a_sig, FRAME_SIZE);
-    biquad(n, mem_hp_n, n, b_hp, a_hp, FRAME_SIZE);
-    biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
-    for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
+    // biquad(x, mem_hp_x, x, b_hp, a_hp, FRAME_SIZE);
+    // biquad(x, mem_resp_x, x, b_sig, a_sig, FRAME_SIZE);
+    // biquad(n, mem_hp_n, n, b_hp, a_hp, FRAME_SIZE);
+    // biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
+    //for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
+    // DNS challenge data is already mixed
+    for (i=0;i<FRAME_SIZE;i++) xn[i] = n[i];
     #ifdef TEST
     for(int i=0; i<FRAME_SIZE; i++){
       out_short[i] = (short)fmax(-32768,fmin(32767, xn[i]*NORM_RATIO));
@@ -688,22 +695,21 @@ int train(int argc, char **argv) {
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     #ifdef TEST
-    
-    if(!silence){
-    pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
-    }
-    interp_band_gain(gf, g);
-    
-    for (i=0;i<FREQ_SIZE;i++) {
-      Y[i].r *= gf[i];
-      Y[i].i *= gf[i];
-    }
-    
-    frame_synthesis(st, out, Y);
-    for(int i=0; i<FRAME_SIZE; i++){
-      out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*NORM_RATIO));
-    }
-    fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
+      if(!silence){
+      pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
+      }
+      interp_band_gain(gf, g);
+      
+      for (i=0;i<FREQ_SIZE;i++) {
+        Y[i].r *= gf[i];
+        Y[i].i *= gf[i];
+      }
+      
+      frame_synthesis(st, out, Y);
+      for(int i=0; i<FRAME_SIZE; i++){
+        out_short[i] = (short)fmax(-32768,fmin(32767, out[i]*NORM_RATIO));
+      }
+      fwrite(out_short, sizeof(short), FRAME_SIZE, f4);
     #endif
 
     compute_lookahead_band_energy(noisy,Ey_lookahead);
