@@ -260,7 +260,8 @@ class Trainer(object):
 
         self.writer = SummaryWriter(config["out_dir"])
         self.finish_train = False
-
+        self.total_train_loss = defaultdict(float)
+        self.total_eval_loss = defaultdict(float)
 
     def run(self):
         """Run training."""
@@ -309,6 +310,7 @@ class Trainer(object):
         loss.backward()
         self.optimizer.step()
 
+        self.total_train_loss["train/total_loss"] += loss.item()
         # update counts
         self.steps += 1
         self.tqdm.update(1)
@@ -338,6 +340,56 @@ class Trainer(object):
             f"({self.train_steps_per_epoch} steps per epoch)."
         )
 
+    @torch.no_grad()
+    def _eval_step(self, batch):
+        """Evaluate model one step."""
+        # parse batch
+        inputs, targets = batch
+        inputs = inputs.to(self.device)
+        targets = targets.to(self.device)
+        # forward + backward + optimize
+        outputs = self.model(inputs)
+
+        loss = self.criterion(outputs, targets)
+        self.total_eval_loss["eval/total_loss"] += loss.item()
+
+    def _eval_epoch(self):
+        """Evaluate model one epoch."""
+        logging.info(f"(Steps: {self.steps}) Start evaluation.")
+        # change mode
+        self.model.eval()
+
+        # calculate loss for each batch
+        for eval_steps_per_epoch, batch in enumerate(
+            tqdm(self.data_loader["dev"], desc="[eval]"), 1
+        ):
+            # eval one step
+            self._eval_step(batch)
+
+            # save intermediate result
+            #if eval_steps_per_epoch == 1:
+            #    self._genearete_and_save_intermediate_result(batch)
+
+        logging.info(
+            f"(Steps: {self.steps}) Finished evaluation "
+            f"({eval_steps_per_epoch} steps per epoch)."
+        )
+        # average loss
+        for key in self.total_eval_loss.keys():
+            self.total_eval_loss[key] /= eval_steps_per_epoch
+            logging.info(
+                f"(Steps: {self.steps}) {key} = {self.total_eval_loss[key]:.4f}."
+            )
+
+        # record
+        self._write_to_tensorboard(self.total_eval_loss)
+
+        # reset
+        self.total_eval_loss = defaultdict(float)
+
+        # restore mode
+        self.model.train()
+
     def _write_to_tensorboard(self, loss):
         """Write to tensorboard."""
         for key, value in loss.items():
@@ -356,10 +408,11 @@ class Trainer(object):
 
     def _check_log_interval(self):
         if self.steps % self.config["log_interval_steps"] == 0:
-            self.total_train_loss /= self.config["log_interval_steps"]
-            logging.info(
-                f"(Steps: {self.steps}) {key} = {self.total_train_loss[key]:.4f}."
-            )
+            for key in self.total_train_loss.keys():
+                self.total_train_loss[key] /= self.config["log_interval_steps"]
+                logging.info(
+                    f"(Steps: {self.steps}) {key} = {self.total_train_loss[key]:.4f}."
+                )
             self._write_to_tensorboard(self.total_train_loss)
 
             # reset
