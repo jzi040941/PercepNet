@@ -590,7 +590,7 @@ int train(int argc, char **argv) {
   noise_state = rnnoise_create(NULL);
   noisy = rnnoise_create(NULL);
   if (argc!=5) {
-    fprintf(stderr, "usage: %s <speech> <noise> <count> <output>\n", argv[0]);
+    fprintf(stderr, "usage: %s <speech> <noisy> <count> <output>\n", argv[0]);
     return 1;
   }
   f1 = fopen(argv[1], "rb");
@@ -667,11 +667,13 @@ int train(int argc, char **argv) {
     } else {
       for (i=0;i<FRAME_SIZE;i++) n[i] = 0;
     }
-    biquad(x, mem_hp_x, x, b_hp, a_hp, FRAME_SIZE);
-    biquad(x, mem_resp_x, x, b_sig, a_sig, FRAME_SIZE);
-    biquad(n, mem_hp_n, n, b_hp, a_hp, FRAME_SIZE);
-    biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
-    for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
+    // biquad(x, mem_hp_x, x, b_hp, a_hp, FRAME_SIZE);
+    // biquad(x, mem_resp_x, x, b_sig, a_sig, FRAME_SIZE);
+    // biquad(n, mem_hp_n, n, b_hp, a_hp, FRAME_SIZE);
+    // biquad(n, mem_resp_n, n, b_noise, a_noise, FRAME_SIZE);
+    //for (i=0;i<FRAME_SIZE;i++) xn[i] = x[i] + n[i];
+    // DNS challenge data is already mixed
+    for (i=0;i<FRAME_SIZE;i++) xn[i] = n[i];
     #ifdef TEST
     for(int i=0; i<FRAME_SIZE; i++){
       out_short[i] = (short)fmax(-32768,fmin(32767, xn[i]*NORM_RATIO));
