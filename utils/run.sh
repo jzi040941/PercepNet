@@ -103,8 +103,8 @@ fi
 #Train pytorch model                              #
 ###################################################
 if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
-   python3 rnn_train.py --train_length_size ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dir} \
-                        --model_filename ${model_filename}
+   python3 rnn_train.py --train_length_size ${train_size_per_batch} --h5_train_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dir} \
+                        --h5_dev_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir} --model_filename ${model_filename}
 fi
 
 ###################################################
