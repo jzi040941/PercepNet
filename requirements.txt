@@ -4,3 +4,6 @@ torch
 tensorboardX
 matplotlib
 h5py
+yaml
+tqdm
+glob
