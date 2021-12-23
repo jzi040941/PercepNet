@@ -58,7 +58,7 @@ int          p
          for (j = 0; j < i; j++)
             rr += MULT32_32_Q31(lpc[j],ac[i - j]);
          rr += SHR32(ac[i + 1],3);
-         r = -SHL32(rr,3)/error;
+         r = -SHL32(rr,3)/(error+0.00001);
          /*  Update LPC coefficients and total error */
          lpc[i] = SHR32(r,3);
          for (j = 0; j < (i+1)>>1; j++)
