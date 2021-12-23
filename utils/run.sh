@@ -26,7 +26,7 @@
 
 
 . ./path.sh || exit 1;
-
+. ./parse_options.sh || exit 1;
 
 dataset_dir="training_set_sept12"
 noisy_wav_dir="noisy"
@@ -38,8 +38,8 @@ h5_dir="h5"
 model_filename="model.pt"
 train_size_per_batch=2000
 
-stage=0     #stage to start
-stop_stage=10 #stop stage
+stage=3     #stage to start
+stop_stage=3 #stop stage
 
 NR_CPUS=3 #TODO: automatically detect how many cpu have
 
@@ -47,7 +47,7 @@ NR_CPUS=3 #TODO: automatically detect how many cpu have
 ###################################################
 # mkdir related dir if not exist                  #
 ###################################################
-mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_dir},${featuer_dir}}
+mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_dir},${feature_dir}}
 
 ###################################################
 # stage1 :resample to 48khz and convert wav to pcm#
@@ -72,14 +72,14 @@ fi
 #Generate c++ feature data for each noisy and clean data      #
 ###################################################
 if [ "${stage}" -le 2 ] && [ "${stop_stage}" -ge 2 ]; then
-   for noisy_pcm_filepath in "${PRJ_ROOT}/${dataset_dir}/${noisy_dir}/*.pcm"; do
-      fileid="${noisy_pcm_filepath%%.pcm*}"
-      clean_pcm_filepath="${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${pcmfilename}.pcm"
-      ${PRJ_ROOT}/src/main ${clean_pcm_filepath} \
+   for noisy_pcm_filepath in ${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/*.pcm; do
+      fileid=`basename "${noisy_pcm_filepath%%.pcm*}" .pcm`
+      clean_pcm_filepath="${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${fileid}.pcm"
+      ${PRJ_ROOT}/bin/src/percepNet ${clean_pcm_filepath} \
       ${noisy_pcm_filepath} \
       ${train_size_per_batch} \
       ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/${fileid}.out
-      echo "${fileid}.out generated"
+      echo "genereated ${fileid}.out"
    done
 fi
 
@@ -87,23 +87,23 @@ fi
 #Convert features to h5 files                     #
 ###################################################
 if [ "${stage}" -le 3 ] && [ "${stop_stage}" -ge 3 ]; then
-   for featurefile in "${PRJ_ROOT}/${dataset_dir}/${feature_dir}/*.out"
-   do
-      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${h5_dir}/${featuerfile}.h5
+   for featurefile in ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/*.out; do
+      fileid=`basename ${featurefile} .out`
+      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_dir}/${fileid}.h5
    done
 fi
 
 ###################################################
 #Train pytorch model                              #
 ###################################################
-if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4]; then
-   python3 rnn_train.py --train_size_per_batch ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${h5_dir} \
+if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
+   python3 rnn_train.py --train_size_per_batch ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dir} \
                         --model_filename ${model_filename}
 fi
 
 ###################################################
 #Convert pytorch model to c++ header              #
 ###################################################
-if [ "${stage}" -le 5 ] && [ "${stop_stage}" -ge 5]; then
+if [ "${stage}" -le 5 ] && [ "${stop_stage}" -ge 5 ]; then
    python3 dump_percepnet.py ${model_filename}
 fi
