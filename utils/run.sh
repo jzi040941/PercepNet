@@ -34,7 +34,8 @@ clean_wav_dir="clean"
 noisy_pcm_dir="noisy_pcm"
 clean_pcm_dir="clean_pcm"
 feature_dir="feature"
-h5_dir="h5"
+h5_train_dir="h5_train"
+h5_dev_dir="h5_dev"
 model_filename="model.pt"
 train_size_per_batch=2000
 
@@ -47,7 +48,7 @@ NR_CPUS=3 #TODO: automatically detect how many cpu have
 ###################################################
 # mkdir related dir if not exist                  #
 ###################################################
-mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_dir},${feature_dir}}
+mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_train_dir},${h5_dev_dir},${feature_dir}}
 
 ###################################################
 # stage1 :resample to 48khz and convert wav to pcm#
@@ -84,12 +85,17 @@ if [ "${stage}" -le 2 ] && [ "${stop_stage}" -ge 2 ]; then
 fi
 
 ###################################################
-#Convert features to h5 files                     #
+#Convert features to h5 files & split dataset     #
 ###################################################
 if [ "${stage}" -le 3 ] && [ "${stop_stage}" -ge 3 ]; then
-   for featurefile in ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/*.out; do
+   python3 split_feature_dataset.py ${PRJ_ROOT}/${dataset_dir}/${feature_dir}
+   for featurefile in `cat ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/train.txt`; do
       fileid=`basename ${featurefile} .out`
-      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_dir}/${fileid}.h5
+      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_train_dir}/${fileid}.h5
+   done
+   for featurefile in `cat ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/dev.txt`; do
+      fileid=`basename ${featurefile} .out`
+      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir}/${fileid}.h5
    done
 fi
 
@@ -97,7 +103,7 @@ fi
 #Train pytorch model                              #
 ###################################################
 if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
-   python3 rnn_train.py --train_size_per_batch ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dir} \
+   python3 rnn_train.py --train_length_size ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dir} \
                         --model_filename ${model_filename}
 fi
 
