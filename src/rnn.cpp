@@ -63,8 +63,8 @@ void compute_rnn(RNNState *rnn, float *gains, float *strengths, const float *inp
   compute_gru(rnn->model->gru_gb, rnn->gb_gru_state, rnn->gru3_state);
 
   //concat for rb gru
-  for (i=0;i<CONV_DIM;i++) rb_gru_input[i] = second_conv1d_out[i];
-  for (i=0;i<CONV_DIM;i++) rb_gru_input[i+CONV_DIM] = rnn->gru3_state[i];
+  for (i=0;i<CONV_DIM;i++) rb_gru_input[i] = rnn->gru3_state[i];
+  for (i=0;i<CONV_DIM;i++) rb_gru_input[i+CONV_DIM] = second_conv1d_out[i];
   compute_gru(rnn->model->gru_rb, rnn->rb_gru_state, rb_gru_input);
   
   //concat for gb denseW
