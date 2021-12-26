@@ -109,7 +109,6 @@ if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
    echo "'--train_length_size', '${train_size_per_batch}', '--h5_train_dir', '${PRJ_ROOT}/${dataset_dir}/${h5_train_dir}', \
                         '--h5_dev_dir', '${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir}', \
                         '--out_dir', '${PRJ_ROOT}/${dataset_dir}/${out_dir}', '--config', '${config}'"
-                        exit 1;
    python3 ${PRJ_ROOT}/rnn_train.py --train_length_size ${train_size_per_batch} --h5_train_dir ${PRJ_ROOT}/${dataset_dir}/${h5_train_dir} \
                         --h5_dev_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir} \
                         --out_dir ${PRJ_ROOT}/${dataset_dir}/${out_dir} --config ${config}
