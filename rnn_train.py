@@ -538,11 +538,13 @@ def main():
         "train" : torch.utils.data.DataLoader(
             dataset["train"], 
             batch_size=config["batch_size"], 
+            num_workers=config["num_workers"],
             shuffle=True
         ),
         "dev": torch.utils.data.DataLoader(
             dataset["dev"], 
             batch_size=config["batch_size"], 
+            num_workers=config["num_workers"],
             shuffle=True
         )
     }
