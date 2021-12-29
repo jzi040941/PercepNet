@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   int i;
   int first = 1;
   float x[FRAME_SIZE];
-  FILE *f1, *fout;
+  FILE *f1, *fout, *f_feature;
   DenoiseState *st;
   st = rnnoise_create(NULL);
   if (argc!=3) {
@@ -26,12 +26,13 @@ int main(int argc, char **argv)
   }
   f1 = fopen(argv[1], "rb");
   fout = fopen(argv[2], "wb");
+  f_feature = fopen("feature_test.raw", "wb");
   while (1) {
     short tmp[FRAME_SIZE]; 
     fread(tmp, sizeof(short), FRAME_SIZE, f1);
     if (feof(f1)) break;
-    for (i=0;i<FRAME_SIZE;i++) x[i] = (float)tmp[i]/32768;
-    rnnoise_process_frame(st, x, x);
+    for (i=0;i<FRAME_SIZE;i++) x[i] = ((float)tmp[i])/32768.f;
+    rnnoise_process_frame(st, x, x, f_feature);
     for (i=0;i<FRAME_SIZE;i++) tmp[i] = x[i]*32768;
     if (!first) fwrite(tmp, sizeof(short), FRAME_SIZE, fout);
     first = 0;

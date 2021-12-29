@@ -3,6 +3,7 @@ project(percepNet)
 
 # GoogleTest requires at least C++11
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra")
 
 include(FetchContent)
 FetchContent_Declare(

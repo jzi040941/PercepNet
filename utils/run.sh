@@ -36,11 +36,14 @@ clean_pcm_dir="clean_pcm"
 feature_dir="feature"
 h5_train_dir="h5_train"
 h5_dev_dir="h5_dev"
+out_dir="exp"
 model_filename="model.pt"
 train_size_per_batch=2000
+config="DNS_Challenge.yaml"
 
-stage=3     #stage to start
-stop_stage=3 #stop stage
+
+stage=4     #stage to start
+stop_stage=4 #stop stage
 
 NR_CPUS=3 #TODO: automatically detect how many cpu have
 
@@ -48,7 +51,7 @@ NR_CPUS=3 #TODO: automatically detect how many cpu have
 ###################################################
 # mkdir related dir if not exist                  #
 ###################################################
-mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_train_dir},${h5_dev_dir},${feature_dir}}
+mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_train_dir},${h5_dev_dir},${feature_dir},${out_dir}}
 
 ###################################################
 # stage1 :resample to 48khz and convert wav to pcm#
@@ -103,8 +106,12 @@ fi
 #Train pytorch model                              #
 ###################################################
 if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
-   python3 rnn_train.py --train_length_size ${train_size_per_batch} --h5_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dir} \
-                        --model_filename ${model_filename}
+   echo "'--train_length_size', '${train_size_per_batch}', '--h5_train_dir', '${PRJ_ROOT}/${dataset_dir}/${h5_train_dir}', \
+                        '--h5_dev_dir', '${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir}', \
+                        '--out_dir', '${PRJ_ROOT}/${dataset_dir}/${out_dir}', '--config', '${config}'"
+   python3 ${PRJ_ROOT}/rnn_train.py --train_length_size ${train_size_per_batch} --h5_train_dir ${PRJ_ROOT}/${dataset_dir}/${h5_train_dir} \
+                        --h5_dev_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir} \
+                        --out_dir ${PRJ_ROOT}/${dataset_dir}/${out_dir} --config ${config}
 fi
 
 ###################################################

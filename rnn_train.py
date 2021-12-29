@@ -1,3 +1,11 @@
+#!/usr/bin python3
+
+# Copyright 2021 Seonghun Noh
+
+import argparse
+import logging
+import os
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
@@ -8,7 +16,49 @@ from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
 import torch.nn.utils.rnn as rnn_utils
 
+from collections import defaultdict
+import yaml
+import glob
+from tqdm import tqdm
+
 plt.switch_backend('agg')
+class h5DirDataset(Dataset):
+    def __init__(self, h5_dir_path, train_length_size=500):
+        self.train_length_size = train_length_size
+        self.h5_dir_path = h5_dir_path
+        self.x_dim = 70
+        self.y_dim = 68
+
+        self.h5_filelist = glob.glob(os.path.join(h5_dir_path, "*.h5"))
+        self.nb_sequences = len(self.h5_filelist)
+        all_data = np.empty((0,138), np.float32)
+        # for filename in self.h5_filelist:
+        #     with h5py.File(filename, 'r') as hf:
+        #         all_data = np.append(all_data,hf['data'][:],axis=0)
+        # all_data = []
+        # for filename in h5_filelist:
+        #     with h5py.File(filename, 'r') as hf:
+        #         all_data += [hf['data'][:]]
+
+        # all_data = np.vstack(tuple(all_data))
+        print(self.nb_sequences, ' sequences')
+        # x_train = all_data[:self.nb_sequences*self.train_length_size, :self.x_dim]
+        # self.x_train = np.reshape(x_train, (self.nb_sequences, self.train_length_size, self.x_dim))
+
+        # y_train = np.copy(all_data[:self.nb_sequences*self.train_length_size, self.x_dim:self.x_dim+self.y_dim])
+        # self.y_train = np.reshape(y_train, (self.nb_sequences, self.train_length_size, self.y_dim))
+
+    def __len__(self):
+        return self.nb_sequences
+
+    def __getitem__(self, index):
+        with h5py.File(self.h5_filelist[index], 'r') as hf:
+            all_data = hf['data'][:]
+        x = all_data[:,:self.x_dim]
+        y = all_data[:,self.x_dim:]
+        return (x,y)
+        #return (self.x_train[index], self.y_train[index])
+
 class h5Dataset(Dataset):
 
     def __init__(self, h5_filename="training.h5", window_size=500):
@@ -179,5 +229,357 @@ def train():
     writer.close()
     torch.save(model.state_dict(), 'model.pt')
 
+class Trainer(object):
+    """Customized trainer module for PercepNet training."""
+
+    def __init__(
+        self,
+        steps,
+        epochs,
+        data_loader,
+        sampler,
+        model,
+        criterion,
+        optimizer,
+        args,
+        config,
+        device=torch.device("cpu"),
+    ):
+        """Initialize trainer.
+        Args:
+            steps (int): Initial global steps.
+            epochs (int): Initial global epochs.
+            data_loader (dict): Dict of data loaders. It must contrain "train" and "dev" loaders.
+            model (nn.Module): Model. Instance of nn.Module
+            criterion (nn.Module): criterions.
+            optimizer (torch.optim): optimizers.
+            args (parser.parse_args()): Instance of argparse parse_args()
+            device (torch.deive): Pytorch device instance.
+        """
+        self.steps = steps
+        self.epochs = epochs
+        self.data_loader = data_loader
+        self.sampler = sampler
+        self.model = model
+        self.criterion = criterion
+        self.args = args
+        self.optimizer = optimizer
+        self.device = device
+        self.config = config
+
+        self.writer = SummaryWriter(config["out_dir"])
+        self.finish_train = False
+        self.total_train_loss = defaultdict(float)
+        self.total_eval_loss = defaultdict(float)
+
+    def run(self):
+        """Run training."""
+        self.tqdm = tqdm(
+            initial=self.steps, total=self.args.train_max_steps, desc="[train]"
+        )
+        while True:
+            # train one epoch
+            self._train_epoch()
+
+            # check whether training is finished
+            if self.finish_train:
+                break
+
+        self.tqdm.close()
+        logging.info("Finished training.")
+
+    def save_checkpoint(self, checkpoint_path):
+        """Save checkpoint."""
+        torch.save(self.model.state_dict(), checkpoint_path)
+
+    def load_checkpoint(self, checkpoint_path):
+        """Load checkpoint.
+        Args:
+            checkpoint_path (str): Checkpoint path to be loaded.
+        """
+        state_dict = torch.load(checkpoint_path, map_location="cpu")
+        if self.args.distributed:
+            self.model.module.load_state_dict(state_dict)
+        else:
+            self.model.load_state_dict(state_dict)
+    
+    def _train_step(self, batch):
+        """Train model one step."""
+        # get the inputs; data is a list of [inputs, labels]
+        inputs, targets = batch
+        inputs = inputs.to(self.device)
+        targets = targets.to(self.device)
+        # zero the parameter gradients
+        self.optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = self.model(inputs)
+        #outputs = torch.cat(outputs,-1)
+        loss = self.criterion(outputs, targets)
+        loss.backward()
+        self.optimizer.step()
+
+        self.total_train_loss["train/total_loss"] += loss.item()
+        # update counts
+        self.steps += 1
+        self.tqdm.update(1)
+        self._check_train_finish()
+
+    def _train_epoch(self):
+        """Train model one epoch."""
+        for train_steps_per_epoch, batch in enumerate(self.data_loader["train"], 1):
+            # train one step
+            self._train_step(batch)
+
+            # check interval
+            if self.args.rank == 0:
+                self._check_log_interval()
+                self._check_eval_interval()
+                self._check_save_interval()
+
+            # check whether training is finished
+            if self.finish_train:
+                return
+
+        # update
+        self.epochs += 1
+        self.train_steps_per_epoch = train_steps_per_epoch
+        logging.info(
+            f"(Steps: {self.steps}) Finished {self.epochs} epoch training "
+            f"({self.train_steps_per_epoch} steps per epoch)."
+        )
+
+    @torch.no_grad()
+    def _eval_step(self, batch):
+        """Evaluate model one step."""
+        # parse batch
+        inputs, targets = batch
+        inputs = inputs.to(self.device)
+        targets = targets.to(self.device)
+        # forward + backward + optimize
+        outputs = self.model(inputs)
+
+        loss = self.criterion(outputs, targets)
+        self.total_eval_loss["eval/total_loss"] += loss.item()
+
+    def _eval_epoch(self):
+        """Evaluate model one epoch."""
+        logging.info(f"(Steps: {self.steps}) Start evaluation.")
+        # change mode
+        self.model.eval()
+
+        # calculate loss for each batch
+        for eval_steps_per_epoch, batch in enumerate(
+            tqdm(self.data_loader["dev"], desc="[eval]"), 1
+        ):
+            # eval one step
+            self._eval_step(batch)
+
+            # save intermediate result
+            #if eval_steps_per_epoch == 1:
+            #    self._genearete_and_save_intermediate_result(batch)
+
+        logging.info(
+            f"(Steps: {self.steps}) Finished evaluation "
+            f"({eval_steps_per_epoch} steps per epoch)."
+        )
+        # average loss
+        for key in self.total_eval_loss.keys():
+            self.total_eval_loss[key] /= eval_steps_per_epoch
+            logging.info(
+                f"(Steps: {self.steps}) {key} = {self.total_eval_loss[key]:.4f}."
+            )
+
+        # record
+        self._write_to_tensorboard(self.total_eval_loss)
+
+        # reset
+        self.total_eval_loss = defaultdict(float)
+
+        # restore mode
+        self.model.train()
+
+    def _write_to_tensorboard(self, loss):
+        """Write to tensorboard."""
+        for key, value in loss.items():
+            self.writer.add_scalar(key, value, self.steps)
+
+    def _check_save_interval(self):
+        if self.steps % self.config["save_interval_steps"] == 0:
+            self.save_checkpoint(
+                os.path.join(self.config["out_dir"], f"checkpoint-{self.steps}steps.pkl")
+            )
+            logging.info(f"Successfully saved checkpoint @ {self.steps} steps.")
+
+    def _check_eval_interval(self):
+        if self.steps % self.config["eval_interval_steps"] == 0:
+            self._eval_epoch()
+
+    def _check_log_interval(self):
+        if self.steps % self.config["log_interval_steps"] == 0:
+            for key in self.total_train_loss.keys():
+                self.total_train_loss[key] /= self.config["log_interval_steps"]
+                logging.info(
+                    f"(Steps: {self.steps}) {key} = {self.total_train_loss[key]:.4f}."
+                )
+            self._write_to_tensorboard(self.total_train_loss)
+
+            # reset
+            self.total_train_loss = defaultdict(float)
+
+    def _check_train_finish(self):
+        if self.steps >= self.config["train_max_steps"]:
+            self.finish_train = True
+
+def main():
+    """Run training process."""
+    parser = argparse.ArgumentParser(
+        description="Train PercepNet (See detail in rnn_train.py)."
+    )
+    parser.add_argument(
+        "--train_length_size",
+        default=2000,
+        type=int,
+        help="RNN network train length size.",
+    )
+    parser.add_argument(
+        "--train_max_steps",
+        default=100000,
+        type=int,
+        help="max train steps.",
+    )
+    parser.add_argument(
+        "--h5_train_dir",
+        type=str,
+        required=True,
+        help="h5 train dataset directory.",
+    )
+    parser.add_argument(
+        "--h5_dev_dir",
+        type=str,
+        required=True,
+        help="h5 dev dataset directory.",
+    )
+    parser.add_argument(
+        "--rank",
+        "--local_rank",
+        default=0,
+        type=int,
+        help="rank for distributed training. no need to explictly specify.",
+    )
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        required=True,
+        help="directory to save checkpoints.",
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="yaml format configuration file.",
+    )
+
+    args = parser.parse_args()
+
+    args.distributed = False
+    if not torch.cuda.is_available():
+        device = torch.device("cpu")
+    else:
+        device = torch.device("cuda")
+        # effective when using fixed size inputs
+        # see https://discuss.pytorch.org/t/what-does-torch-backends-cudnn-benchmark-do/5936
+        torch.backends.cudnn.benchmark = True
+        torch.cuda.set_device(args.rank)
+        # setup for distributed training
+        # see example: https://github.com/NVIDIA/apex/tree/master/examples/simple/distributed
+        if "WORLD_SIZE" in os.environ:
+            args.world_size = int(os.environ["WORLD_SIZE"])
+            args.distributed = args.world_size > 1
+        if args.distributed:
+            torch.distributed.init_process_group(backend="nccl", init_method="env://")
+
+    # load and save config
+    with open(args.config) as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+    config.update(vars(args))
+    with open(os.path.join(args.out_dir, "config.yml"), "w") as f:
+        yaml.dump(config, f, Dumper=yaml.Dumper)
+    for key, value in config.items():
+        logging.info(f"{key} = {value}")
+
+    model = PercepNet().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    criterion = CustomLoss()
+
+    train_dataset = h5DirDataset(
+            args.h5_train_dir, train_length_size=args.train_length_size)
+    dev_dataset = h5DirDataset(
+            args.h5_dev_dir, train_length_size=args.train_length_size)
+
+    logging.info(f"The number of training files = {len(train_dataset)}.")
+    logging.info(f"The number of training files = {len(dev_dataset)}.")
+
+    dataset = {
+        "train": train_dataset,
+        "dev": dev_dataset,
+    }
+
+    sampler = {"train": None, "dev": None}
+    if args.distributed:
+        # setup sampler for distributed training
+        from torch.utils.data.distributed import DistributedSampler
+
+        sampler["train"] = DistributedSampler(
+            dataset=dataset["train"],
+            num_replicas=args.world_size,
+            rank=args.rank,
+            shuffle=True,
+        )
+        sampler["dev"] = DistributedSampler(
+            dataset=dataset["dev"],
+            num_replicas=args.world_size,
+            rank=args.rank,
+            shuffle=False,
+        )
+    
+    data_loader = {
+        "train" : torch.utils.data.DataLoader(
+            dataset["train"], 
+            batch_size=config["batch_size"], 
+            num_workers=config["num_workers"],
+            shuffle=True
+        ),
+        "dev": torch.utils.data.DataLoader(
+            dataset["dev"], 
+            batch_size=config["batch_size"], 
+            num_workers=config["num_workers"],
+            shuffle=True
+        )
+    }
+    # define trainer
+    trainer = Trainer(
+        steps=0,
+        epochs=0,
+        model=model,
+        data_loader=data_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        config=config,
+        args=args,
+        sampler=sampler,
+        device=device,
+    )
+
+    # run training loop
+    try:
+        trainer.run()
+    finally:
+        trainer.save_checkpoint(
+            os.path.join(config["out_dir"], f"checkpoint-{trainer.steps}steps.pt")
+        )
+        logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")
+
 if __name__ == '__main__':
-    train()
+    main()
+    #train()

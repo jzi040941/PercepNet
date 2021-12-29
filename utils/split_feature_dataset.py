@@ -5,8 +5,7 @@ import os
 
 def main(path):
     dev_ratio = 0.2
-    filelist = onlyfiles = [os.path.join(path, f) for f in os.listdir(path) if 
-    os.path.isfile(os.path.join(path, f))]
+    filelist = glob.glob(os.path.join(path, "*.out"))
     random.shuffle(filelist)
     border_idx = int(len(filelist)*(1-dev_ratio))
     train_set_list = filelist[:border_idx]
