@@ -29,26 +29,35 @@ class h5DirDataset(Dataset):
         self.x_dim = 70
         self.y_dim = 68
 
-        h5_filelist = glob.glob(os.path.join(h5_dir_path, "*.h5"))
-        self.nb_sequences = len(h5_filelist)
-        all_data = []
-        for filename in h5_filelist:
-            with h5py.File(filename, 'r') as hf:
-                all_data += [hf['data'][:]]
+        self.h5_filelist = glob.glob(os.path.join(h5_dir_path, "*.h5"))
+        self.nb_sequences = len(self.h5_filelist)
+        all_data = np.empty((0,138), np.float32)
+        # for filename in self.h5_filelist:
+        #     with h5py.File(filename, 'r') as hf:
+        #         all_data = np.append(all_data,hf['data'][:],axis=0)
+        # all_data = []
+        # for filename in h5_filelist:
+        #     with h5py.File(filename, 'r') as hf:
+        #         all_data += [hf['data'][:]]
 
-        all_data = np.vstack(tuple(all_data))
+        # all_data = np.vstack(tuple(all_data))
         print(self.nb_sequences, ' sequences')
-        x_train = all_data[:self.nb_sequences*self.train_length_size, :self.x_dim]
-        self.x_train = np.reshape(x_train, (self.nb_sequences, self.train_length_size, self.x_dim))
+        # x_train = all_data[:self.nb_sequences*self.train_length_size, :self.x_dim]
+        # self.x_train = np.reshape(x_train, (self.nb_sequences, self.train_length_size, self.x_dim))
 
-        y_train = np.copy(all_data[:self.nb_sequences*self.train_length_size, self.x_dim:self.x_dim+self.y_dim])
-        self.y_train = np.reshape(y_train, (self.nb_sequences, self.train_length_size, self.y_dim))
+        # y_train = np.copy(all_data[:self.nb_sequences*self.train_length_size, self.x_dim:self.x_dim+self.y_dim])
+        # self.y_train = np.reshape(y_train, (self.nb_sequences, self.train_length_size, self.y_dim))
 
     def __len__(self):
         return self.nb_sequences
 
     def __getitem__(self, index):
-        return (self.x_train[index], self.y_train[index])
+        with h5py.File(self.h5_filelist[index], 'r') as hf:
+            all_data = hf['data'][:]
+        x = all_data[:,:self.x_dim]
+        y = all_data[:,self.x_dim:]
+        return (x,y)
+        #return (self.x_train[index], self.y_train[index])
 
 class h5Dataset(Dataset):
 
@@ -435,7 +444,7 @@ def main():
     )
     parser.add_argument(
         "--train_max_steps",
-        default=10000,
+        default=100000,
         type=int,
         help="max train steps.",
     )
