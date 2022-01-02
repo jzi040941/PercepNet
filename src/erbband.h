@@ -70,8 +70,8 @@ class ERBBand{
           }
           //impose mininum 100hz(2 nfft)
           for(int k=0; k<N; k++){
-            if(nfftborder[k+2]-nfftborder[k]<2)
-              nfftborder[k+2]+=(2-(nfftborder[k+2]-nfftborder[k]));
+            if(nfftborder[k+1]-nfftborder[k]<2)
+              nfftborder[k+1]+=(2-(nfftborder[k+1]-nfftborder[k]));
           }
           for(int k=0; k<N; k++){
               l_k = cutoffs[k];
