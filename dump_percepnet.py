@@ -128,7 +128,7 @@ Conv1d.dump_data = dump_conv1d_module
 if __name__ == '__main__':
     model = rnn_train.PercepNet()
     #model = (
-    model.load_state_dict(torch.load(sys.argv[1]))
+    model.load_state_dict(torch.load(sys.argv[1], map_location="cpu"))
 
     if len(sys.argv) > 2:
         cfile = sys.argv[2]
