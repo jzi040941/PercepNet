@@ -449,6 +449,10 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
 static void create_features(float* Ey_lookahead, float* pitch_coh, float T, float pitchcorr, float* features){
   RNN_COPY(&features[0], Ey_lookahead, NB_BANDS);
   RNN_COPY(&features[NB_BANDS], pitch_coh, NB_BANDS);
+  //normalize
+  for(int i=0; i<68; i++){
+    features[i] = features[i]*30;
+  }
   features[68] = T;
   features[69] = pitchcorr;
 }
@@ -486,7 +490,7 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in, FILE*
   float T = st->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
   float pitchcorr = st->pitch_corr;
   create_features(Ex_lookahead,Exp,T,pitchcorr,features);
- 
+  
   compute_rnn(&st->rnn,g,r,features);
   fwrite(g, sizeof(float), 34, f_feature);
   fwrite(r, sizeof(float), 34, f_feature);
