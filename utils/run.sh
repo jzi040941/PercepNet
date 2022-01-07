@@ -28,24 +28,25 @@
 . ./path.sh || exit 1;
 . ./parse_options.sh || exit 1;
 
-dataset_dir="training_set_sept12"
+dataset_dir="training_set_sept12_500h"
 noisy_wav_dir="noisy"
 clean_wav_dir="clean"
 noisy_pcm_dir="noisy_pcm"
 clean_pcm_dir="clean_pcm"
-feature_dir="feature"
+feature_dir="features"
 h5_train_dir="h5_train"
 h5_dev_dir="h5_dev"
-out_dir="exp"
+out_dir="exp_erbfix_x30_snr45_rmax99"
+#out_dir="exp_test"
 model_filename="model.pt"
 train_size_per_batch=2000
 config="DNS_Challenge.yaml"
-
+#pretrain="/home/seonghun/develop/PercepNet/training_set_sept12_500h/exp_erbfix_band30times_nopretrain/checkpoint-10000steps.pkl"
 
 stage=4     #stage to start
 stop_stage=4 #stop stage
 
-NR_CPUS=3 #TODO: automatically detect how many cpu have
+NR_CPUS=8 #TODO: automatically detect how many cpu have
 
 
 ###################################################
@@ -57,34 +58,62 @@ mkdir -p ${PRJ_ROOT}/${dataset_dir}/{${noisy_pcm_dir},${clean_pcm_dir},${h5_trai
 # stage1 :resample to 48khz and convert wav to pcm#
 ###################################################
 if [ "${stage}" -le 1 ] && [ "${stop_stage}" -ge 1 ]; then
-   job_count=0
+   i=0
+   mkdir -p ${PRJ_ROOT}/${dataset_dir}/${noisy_wav_dir}/fileid
+   mkdir -p ${PRJ_ROOT}/${dataset_dir}/${clean_wav_dir}/fileid
    for wavfilepath in ${PRJ_ROOT}/${dataset_dir}/${noisy_wav_dir}/*.wav; do
-      pcmfilename="`basename "${wavfilepath##*fileid_}" .wav`.pcm"
-      pcmfilepath=${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/${pcmfilename}
-      sox ${wavfilepath} -b 16 -e signed-integer -c 1 -r 48k -t raw ${pcmfilepath}
+      ((i=i%NR_CPUS)); ((i++==0)) && wait
+      (
+      # pcmfilename="`basename "${wavfilepath##*fileid_}" .wav`.pcm"
+      # pcmfilepath=${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/${pcmfilename}
+      # sox ${wavfilepath} -b 16 -e signed-integer -c 1 -r 48k -t raw ${pcmfilepath}
+      
+      # reduce disk usage
+      newwavfilename="`basename "${wavfilepath##*fileid_}" .wav`.wav"
+      mv ${wavfilepath} ${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/${newwavfilename}
+      ) &
    done
+   wait
 
+   i=0
    for wavfilepath in ${PRJ_ROOT}/${dataset_dir}/${clean_wav_dir}/*.wav; do
-      pcmfilename="`basename "${wavfilepath##*fileid_}" .wav`.pcm"
-      pcmfilepath=${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${pcmfilename}
-      sox ${wavfilepath} -b 16 -e signed-integer -c 1 -r 48k -t raw ${pcmfilepath}
+      ((i=i%NR_CPUS)); ((i++==0)) && wait
+      (
+      # pcmfilename="`basename "${wavfilepath##*fileid_}" .wav`.pcm"
+      # pcmfilepath=${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${pcmfilename}
+      # sox ${wavfilepath} -b 16 -e signed-integer -c 1 -r 48k -t raw ${pcmfilepath}
+      newwavfilename="`basename "${wavfilepath##*fileid_}" .wav`.wav"
+      mv ${wavfilepath} ${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${newwavfilename}
+      ) &
    done
-   
+   wait
 fi
 
 ###################################################
 #Generate c++ feature data for each noisy and clean data      #
 ###################################################
 if [ "${stage}" -le 2 ] && [ "${stop_stage}" -ge 2 ]; then
-   for noisy_pcm_filepath in ${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/*.pcm; do
-      fileid=`basename "${noisy_pcm_filepath%%.pcm*}" .pcm`
+   i=0
+   
+   for noisy_wav_filepath in ${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/*.wav; do
+      ((i=i%NR_CPUS)); ((i++==0)) && wait
+      (
+      fileid=`basename "${noisy_wav_filepath%%.wav*}" .wav`
+      noisy_pcm_filepath="${PRJ_ROOT}/${dataset_dir}/${noisy_pcm_dir}/${fileid}.pcm"
+      sox ${noisy_wav_filepath} -b 16 -e signed-integer -c 1 -r 48k -t raw ${noisy_pcm_filepath}
+      clean_wav_filepath="${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${fileid}.wav"
       clean_pcm_filepath="${PRJ_ROOT}/${dataset_dir}/${clean_pcm_dir}/${fileid}.pcm"
+      sox ${clean_wav_filepath} -b 16 -e signed-integer -c 1 -r 48k -t raw ${clean_pcm_filepath}
       ${PRJ_ROOT}/bin/src/percepNet ${clean_pcm_filepath} \
       ${noisy_pcm_filepath} \
       ${train_size_per_batch} \
       ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/${fileid}.out
+      rm ${noisy_pcm_filepath}
+      rm ${clean_pcm_filepath}
       echo "genereated ${fileid}.out"
+      ) &
    done
+   wait
 fi
 
 ###################################################
@@ -92,26 +121,27 @@ fi
 ###################################################
 if [ "${stage}" -le 3 ] && [ "${stop_stage}" -ge 3 ]; then
    python3 split_feature_dataset.py ${PRJ_ROOT}/${dataset_dir}/${feature_dir}
-   for featurefile in `cat ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/train.txt`; do
-      fileid=`basename ${featurefile} .out`
-      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_train_dir}/${fileid}.h5
-   done
-   for featurefile in `cat ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/dev.txt`; do
-      fileid=`basename ${featurefile} .out`
-      python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir}/${fileid}.h5
-   done
+   # for featurefile in `cat ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/train.txt`; do
+   #    fileid=`basename ${featurefile} .out`
+   #    python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_train_dir}/${fileid}.h5
+   # done
+   # for featurefile in `cat ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/dev.txt`; do
+   #    fileid=`basename ${featurefile} .out`
+   #    python3 bin2h5.py ${featurefile} ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir}/${fileid}.h5
+   # done
 fi
 
 ###################################################
 #Train pytorch model                              #
 ###################################################
+
 if [ "${stage}" -le 4 ] && [ "${stop_stage}" -ge 4 ]; then
-   echo "'--train_length_size', '${train_size_per_batch}', '--h5_train_dir', '${PRJ_ROOT}/${dataset_dir}/${h5_train_dir}', \
-                        '--h5_dev_dir', '${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir}', \
+   echo "'--train_length_size', '${train_size_per_batch}', '--train_filelist_path', '${PRJ_ROOT}/${dataset_dir}/${feature_dir}/train.txt', \
+                        '--dev_filelist_path', '${PRJ_ROOT}/${dataset_dir}/${feature_dir}/dev.txt', \
                         '--out_dir', '${PRJ_ROOT}/${dataset_dir}/${out_dir}', '--config', '${config}'"
-   python3 ${PRJ_ROOT}/rnn_train.py --train_length_size ${train_size_per_batch} --h5_train_dir ${PRJ_ROOT}/${dataset_dir}/${h5_train_dir} \
-                        --h5_dev_dir ${PRJ_ROOT}/${dataset_dir}/${h5_dev_dir} \
-                        --out_dir ${PRJ_ROOT}/${dataset_dir}/${out_dir} --config ${config}
+   python3 ${PRJ_ROOT}/rnn_train.py --train_length_size ${train_size_per_batch} --train_filelist_path ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/train.txt \
+                        --dev_filelist_path ${PRJ_ROOT}/${dataset_dir}/${feature_dir}/dev.txt \
+                        --out_dir ${PRJ_ROOT}/${dataset_dir}/${out_dir} --config ${config} 
 fi
 
 ###################################################

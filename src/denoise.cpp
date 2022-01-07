@@ -449,6 +449,10 @@ void pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const
 static void create_features(float* Ey_lookahead, float* pitch_coh, float T, float pitchcorr, float* features){
   RNN_COPY(&features[0], Ey_lookahead, NB_BANDS);
   RNN_COPY(&features[NB_BANDS], pitch_coh, NB_BANDS);
+  //normalize
+  for(int i=0; i<68; i++){
+    features[i] = features[i]*30;
+  }
   features[68] = T;
   features[69] = pitchcorr;
 }
@@ -463,7 +467,7 @@ static void compute_lookahead_band_energy(DenoiseState *st, float *Ey_ahead){
   compute_band_energy(Ey_ahead, Y);
 }
 
-float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
+float rnnoise_process_frame(DenoiseState *st, float *out, const float *in, FILE* f_feature) {
   int i;
   kiss_fft_cpx X[FREQ_SIZE];
   kiss_fft_cpx P[WINDOW_SIZE];
@@ -480,13 +484,16 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   //static const float a_hp[2] = {-1.99599, 0.99600};
   //static const float b_hp[2] = {-2, 1};
   //biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
-  silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
+  silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, in);
 
   compute_lookahead_band_energy(st,Ex_lookahead);
   float T = st->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
   float pitchcorr = st->pitch_corr;
   create_features(Ex_lookahead,Exp,T,pitchcorr,features);
+  
   compute_rnn(&st->rnn,g,r,features);
+  fwrite(g, sizeof(float), 34, f_feature);
+  fwrite(r, sizeof(float), 34, f_feature);
   //r will be estimated by dnn
   if(!silence){
   pitch_filter(X, P, Ex, Ep, Exp, g, r);
@@ -537,7 +544,7 @@ void adjust_gain_strength_by_condition(CommonState st, float *Ephatp, float *Exp
     if(Ephatp[i]<Exp[i])
     {
       g_att = sqrt((1+st.n0-Exp[i]*Exp[i])/(1+st.n0-Ephatp[i]*Ephatp[i]));
-      r[i] = 1;
+      r[i] = 0.99;
       g[i] *= g_att;
     }
   }
@@ -601,10 +608,10 @@ int train(int argc, char **argv) {
   f5 = fopen("test_input.pcm","wb");
   #endif
   maxCount = atoi(argv[3]);
-  for(i=0;i<150;i++) {
-    short tmp[FRAME_SIZE];
-    fread(tmp, sizeof(short), FRAME_SIZE, f2);
-  }
+  //for(i=0;i<150;i++) {
+  //  short tmp[FRAME_SIZE];
+  //  fread(tmp, sizeof(short), FRAME_SIZE, f2);
+  //}
   while (1) {
     kiss_fft_cpx X[FREQ_SIZE], Y[FREQ_SIZE], N[FREQ_SIZE], P[FREQ_SIZE];
     kiss_fft_cpx Phat[FREQ_SIZE];/*only for build*/
@@ -649,7 +656,7 @@ int train(int argc, char **argv) {
         rewind(f1);
         fread(tmp, sizeof(short), FRAME_SIZE, f1);
       }
-      for (i=0;i<FRAME_SIZE;i++) norm_tmp[i] = (float)tmp[i]/NORM_RATIO;
+      for (i=0;i<FRAME_SIZE;i++) norm_tmp[i] = ((float)tmp[i])/NORM_RATIO;
       for (i=0;i<FRAME_SIZE;i++) x[i] = speech_gain*norm_tmp[i];
       for (i=0;i<FRAME_SIZE;i++) E += norm_tmp[i]*(float)norm_tmp[i];
     } else {
@@ -662,7 +669,7 @@ int train(int argc, char **argv) {
         rewind(f2);
         fread(tmp, sizeof(short), FRAME_SIZE, f2);
       }
-      for (i=0;i<FRAME_SIZE;i++) norm_tmp[i] = (float)tmp[i]/NORM_RATIO;
+      for (i=0;i<FRAME_SIZE;i++) norm_tmp[i] = ((float)tmp[i])/NORM_RATIO;
       for (i=0;i<FRAME_SIZE;i++) n[i] = noise_gain*norm_tmp[i];
     } else {
       for (i=0;i<FRAME_SIZE;i++) n[i] = 0;
@@ -677,7 +684,7 @@ int train(int argc, char **argv) {
     #ifdef TEST
     for(int i=0; i<FRAME_SIZE; i++){
       out_short[i] = (short)fmax(-32768,fmin(32767, xn[i]*NORM_RATIO));
-      xn[i] = (float)out_short[i]/NORM_RATIO;
+      //xn[i] = (float)out_short[i]/NORM_RATIO;
     }
     
     fwrite(out_short, sizeof(short), FRAME_SIZE, f5);
@@ -688,10 +695,10 @@ int train(int argc, char **argv) {
     int silence = compute_frame_features(noisy, Y, Phat/*only use for Test*/, Ey, Ephat/*only use for Test*/, Ephaty, features, xn);
     compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
     calc_ideal_gain(Ex, Ey, g);
-    //compute_band_corr(Eyp, Y, P);
-    //for (i=0;i<NB_BANDS;i++) Eyp[i] = fmin(1,fmax(0,Eyp[i]/sqrt(.001+Ey[i]*Ep[i])));
-    estimate_phat_corr(common, Ephaty, Ephatp);
-    filter_strength_calc(Exp, Ephaty, Ephatp, r);
+    compute_band_corr(Eyp, Y, P);
+    for (i=0;i<NB_BANDS;i++) Eyp[i] = fmin(1,fmax(0,Eyp[i]/sqrt(.001+Ey[i]*Ep[i])));
+    estimate_phat_corr(common, Eyp, Ephatp);
+    filter_strength_calc(Exp, Eyp, Ephatp, r);
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     #ifdef TEST

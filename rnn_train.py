@@ -5,6 +5,7 @@
 import argparse
 import logging
 import os
+import io
 
 import torch
 import torch.nn as nn
@@ -20,8 +21,37 @@ from collections import defaultdict
 import yaml
 import glob
 from tqdm import tqdm
+import PIL.Image
+from torchvision.transforms import ToTensor
 
 plt.switch_backend('agg')
+class CppRawListDataset(Dataset):
+    def __init__(self, filelist_path, train_length_size=500):
+        self.train_length_size = train_length_size
+        self.filelist_path = filelist_path
+        self.x_dim = 70
+        self.y_dim = 68
+
+        with open(filelist_path, "r") as f:
+            self.filelist = [filepath.rstrip('\n') for filepath in f.readlines()]
+        self.nb_sequences = len(self.filelist)
+
+        print(self.nb_sequences, ' sequences')
+
+    def __len__(self):
+        return self.nb_sequences
+
+    def __getitem__(self, index):
+        with open(self.filelist[index], 'rb') as cpp_out:
+            all_data = np.fromfile(cpp_out, np.float32)
+            all_data = np.reshape(all_data, (self.train_length_size,138))
+            #make it band energy 30 times bigger for compansating low energy
+            all_data[:,:68] = all_data[:,:68]*30
+
+        x = all_data[:,:self.x_dim]
+        y = all_data[:,self.x_dim:]
+        return (x,y)
+
 class h5DirDataset(Dataset):
     def __init__(self, h5_dir_path, train_length_size=500):
         self.train_length_size = train_length_size
@@ -31,22 +61,8 @@ class h5DirDataset(Dataset):
 
         self.h5_filelist = glob.glob(os.path.join(h5_dir_path, "*.h5"))
         self.nb_sequences = len(self.h5_filelist)
-        all_data = np.empty((0,138), np.float32)
-        # for filename in self.h5_filelist:
-        #     with h5py.File(filename, 'r') as hf:
-        #         all_data = np.append(all_data,hf['data'][:],axis=0)
-        # all_data = []
-        # for filename in h5_filelist:
-        #     with h5py.File(filename, 'r') as hf:
-        #         all_data += [hf['data'][:]]
 
-        # all_data = np.vstack(tuple(all_data))
         print(self.nb_sequences, ' sequences')
-        # x_train = all_data[:self.nb_sequences*self.train_length_size, :self.x_dim]
-        # self.x_train = np.reshape(x_train, (self.nb_sequences, self.train_length_size, self.x_dim))
-
-        # y_train = np.copy(all_data[:self.nb_sequences*self.train_length_size, self.x_dim:self.x_dim+self.y_dim])
-        # self.y_train = np.reshape(y_train, (self.nb_sequences, self.train_length_size, self.y_dim))
 
     def __len__(self):
         return self.nb_sequences
@@ -57,7 +73,6 @@ class h5DirDataset(Dataset):
         x = all_data[:,:self.x_dim]
         y = all_data[:,self.x_dim:]
         return (x,y)
-        #return (self.x_train[index], self.y_train[index])
 
 class h5Dataset(Dataset):
 
@@ -229,6 +244,20 @@ def train():
     writer.close()
     torch.save(model.state_dict(), 'model.pt')
 
+def gen_plot(y, y_hat):
+    # Create a figure to contain the plot.
+    plt.figure(figsize=(10,5))
+
+    # Start next subplot.
+    plt.subplot(1, 2, 1)
+    plt.imshow(y_hat.T,interpolation='none',cmap=plt.cm.jet,origin='lower',aspect='auto')  
+    plt.subplot(1, 2, 2)
+    plt.imshow(y.T,interpolation='none',cmap=plt.cm.jet,origin='lower',aspect='auto')
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    return buf
+
 class Trainer(object):
     """Customized trainer module for PercepNet training."""
 
@@ -376,8 +405,8 @@ class Trainer(object):
             self._eval_step(batch)
 
             # save intermediate result
-            #if eval_steps_per_epoch == 1:
-            #    self._genearete_and_save_intermediate_result(batch)
+            if eval_steps_per_epoch == 1:
+                self._genearete_and_save_intermediate_result(batch)
 
         logging.info(
             f"(Steps: {self.steps}) Finished evaluation "
@@ -398,6 +427,34 @@ class Trainer(object):
 
         # restore mode
         self.model.train()
+
+    @torch.no_grad()
+    def _genearete_and_save_intermediate_result(self, batch):
+        """Generate and save intermediate result."""
+        # delayed import to avoid error related backend error
+        import matplotlib.pyplot as plt
+
+        # generate
+        x_batch, y_batch = batch
+        x_batch = x_batch.to(self.device)
+        y_batch = y_batch.to(self.device)
+        y_batch_ = self.model(x_batch)
+        
+  
+        # check directory
+        #dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
+        #if not os.path.exists(dirname):
+        #    os.makedirs(dirname)
+
+        for idx, (y, y_) in enumerate(zip(y_batch, y_batch_), 1):
+            if idx==1:
+                # convert to ndarray
+                y, y_ = y.cpu().numpy(), y_.cpu().numpy()
+                plot_buf=gen_plot(y, y_)
+                image = PIL.Image.open(plot_buf)
+                image = ToTensor()(image)
+                self.writer.add_image('rb,gb hat', image, self.steps)
+                print("writeimage")
 
     def _write_to_tensorboard(self, loss):
         """Write to tensorboard."""
@@ -449,16 +506,23 @@ def main():
         help="max train steps.",
     )
     parser.add_argument(
-        "--h5_train_dir",
+        "--train_filelist_path",
         type=str,
         required=True,
-        help="h5 train dataset directory.",
+        help="cpp generated feature train filelist path.",
     )
     parser.add_argument(
-        "--h5_dev_dir",
+        "--dev_filelist_path",
         type=str,
         required=True,
-        help="h5 dev dataset directory.",
+        help="cpp generated feature dev filelist path",
+    )
+    parser.add_argument(
+        "--pretrain",
+        default="",
+        type=str,
+        nargs="?",
+        help='checkpoint file path to load pretrained params. (default="")',
     )
     parser.add_argument(
         "--rank",
@@ -512,10 +576,10 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = CustomLoss()
 
-    train_dataset = h5DirDataset(
-            args.h5_train_dir, train_length_size=args.train_length_size)
-    dev_dataset = h5DirDataset(
-            args.h5_dev_dir, train_length_size=args.train_length_size)
+    train_dataset = CppRawListDataset(
+            args.train_filelist_path, train_length_size=args.train_length_size)
+    dev_dataset = CppRawListDataset(
+            args.dev_filelist_path, train_length_size=args.train_length_size)
 
     logging.info(f"The number of training files = {len(train_dataset)}.")
     logging.info(f"The number of training files = {len(dev_dataset)}.")
@@ -554,7 +618,7 @@ def main():
             dataset["dev"], 
             batch_size=config["batch_size"], 
             num_workers=config["num_workers"],
-            shuffle=True
+            shuffle=False
         )
     }
     # define trainer
@@ -571,7 +635,12 @@ def main():
         device=device,
     )
 
+    # load pretrained parameters from checkpoint
+    if len(args.pretrain) != 0:
+        trainer.load_checkpoint(args.pretrain)
+        logging.info(f"Successfully load parameters from {args.pretrain}.")
     # run training loop
+
     try:
         trainer.run()
     finally:
