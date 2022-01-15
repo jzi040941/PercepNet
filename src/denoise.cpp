@@ -483,7 +483,7 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   silence = compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
 
   compute_lookahead_band_energy(st,Ex_lookahead);
-  float T = st->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
+  float T = (float)st->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
   float pitchcorr = st->pitch_corr;
   create_features(Ex_lookahead,Exp,T,pitchcorr,features);
   compute_rnn(&st->rnn,g,r,features);
@@ -712,7 +712,7 @@ int train(int argc, char **argv) {
     fwrite(Ey_lookahead, sizeof(float), NB_BANDS, f3);//Y(l+M)
     fwrite(Ephaty, sizeof(float), NB_BANDS, f3);//pitch coherence
     
-    float T = noisy->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
+    float T = (float)noisy->last_period/(PITCH_MAX_PERIOD-3*PITCH_MIN_PERIOD);
     float pitchcorr = noisy->pitch_corr;
     fwrite(&T, sizeof(float), 1, f3);//pitch
     fwrite(&pitchcorr, sizeof(float), 1, f3);//pitch correlation
