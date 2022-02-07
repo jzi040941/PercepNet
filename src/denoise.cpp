@@ -40,6 +40,8 @@
 #define NB_FEATURES (NB_BANDS*2+2)
 #define NORM_RATIO 32768
 
+#define ENVELOPE_POSTFILTERING_BETA 0.02f
+
 #ifndef TEST
 #define TEST 1
 #endif
@@ -209,6 +211,48 @@ static void check_init() {
   common.n0 = 0.03;
 
   common.init = 1;
+}
+
+static void post_filtering(float* g, const float* Ey) {
+    // Envelope Postfiltering
+    int i = 0;
+    float E0 = 0;
+    float E1 = 0;
+    float E_div = 0;
+    float g_w[NB_BANDS] = { 0 };
+    float G = 0.0f;
+
+    // warped gain
+    for (i = 0; i<NB_BANDS; i++) {
+      g_w[i] = g[i]*sinf(M_PI/2*g[i]);
+    }
+
+    // total energy of the enhanced signal
+    for (i = 0; i<NB_BANDS; i++) {
+      E0 += g[i]*Ey[i];
+    }
+
+    // total energy when using the warped gain
+    for (i = 0; i<NB_BANDS; i++) {
+      E1 += g_w[i]*Ey[i];
+    }
+
+    // global gain compensation heuristic
+    E_div = E0/(E1+1e-6f);
+    G = sqrtf(
+          ((1+ENVELOPE_POSTFILTERING_BETA)*E_div)/(1+ENVELOPE_POSTFILTERING_BETA*(E_div*E_div))
+        );
+
+    // Scaling the final signal for the frame by G
+    for (i = 0; i<NB_BANDS; i++) {
+      float e = G*g_w[i];
+      if (e > 1.0f) {
+        e = 1.0f;
+      } else if (e < 0.0f) {
+        e = 0.0f;
+      }
+      g[i] = e;
+    }
 }
 
 DenoiseState *rnnoise_create(RNNModel *model) {
@@ -702,6 +746,7 @@ int train(int argc, char **argv) {
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     #ifdef TEST
+      post_filtering(g, Ey);
       if(!silence){
       pitch_filter(Y, Phat, Ey, Ephat, Ephaty, g, r);
       }
