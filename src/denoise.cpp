@@ -245,13 +245,7 @@ static void post_filtering(float* g, const float* Ey) {
 
     // Scaling the final signal for the frame by G
     for (i = 0; i<NB_BANDS; i++) {
-      float e = G*g_w[i];
-      if (e > 1.0f) {
-        e = 1.0f;
-      } else if (e < 0.0f) {
-        e = 0.0f;
-      }
-      g[i] = e;
+      g[i] = G*g_w[i];
     }
 }
 
