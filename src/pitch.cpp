@@ -382,7 +382,18 @@ void pitch_search(const opus_val16 *x_lp, opus_val16 *y,
       offset = 0;
    }
    *pitch = 2*best_pitch[0]-offset;
-   *pitch_corr = xcorr[best_pitch[0]];
+   /* *pitch_corr = xcorr[best_pitch[0]]; */
+   /* 
+      An estimate of the pitch correlation modified pitch correlation inspired by
+      section 3.1 Features and Quantization: Pitch in the paper 
+      <A Real-Time Wideband Neural Vocoder at 1.6 kb/s Using LPCNet
+
+      Link: https://jmvalin.ca/papers/lpcnet_codec.pdf
+    */
+   *pitch_corr = 2*xcorr[best_pitch[0]] / (
+      celt_inner_prod(x_lp4, x_lp4, len>>2)+
+      celt_inner_prod(&y_lp4[best_pitch[0]], &y_lp4[best_pitch[0]], len>>2)
+   );
 }
 
 #ifdef FIXED_POINT
