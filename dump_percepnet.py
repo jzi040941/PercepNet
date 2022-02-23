@@ -26,7 +26,7 @@
 import torch
 import sys
 import rnn_train
-from torch.nn import Sequential, GRU, Conv1d, Linear
+from torch.nn import Sequential, GRU, Conv1d, Linear, Dropout
 import numpy as np
 
 def printVector(f, vector, name, dtype='float'):
@@ -53,7 +53,7 @@ def dump_sequential_module(self, f, name):
     self[0].dump_data(f,name,activation)
 Sequential.dump_data = dump_sequential_module
 
-def dump_linear_module(self, f, name, activation):
+def dump_linear_module(self, f, name, activation='LINEAR'):
     print("printing layer " + name)
     weight = self.weight
     bias = self.bias
@@ -144,7 +144,8 @@ if __name__ == '__main__':
     f.write('#ifdef HAVE_CONFIG_H\n#include "config.h"\n#endif\n\n#include "nnet.h"\n#include "nnet_data.h"\n\n')
 
     for name, module in model.named_children():
-        module.dump_data(f, name)
+        if "dropout" not in name:
+          module.dump_data(f, name)
 
     f.write('extern const RNNModel percepnet_model_orig = {\n')
     for name, module in model.named_children():
