@@ -12,7 +12,7 @@ https://www.researchgate.net/publication/343568932_A_Perceptually-Motivated_Appr
 - [X] DNNModel pytorch
 - [X] DNNModel c++ implementation
 - [ ] Pretrained model
-- [ ] Postfiltering
+- [X] Postfiltering (done by [@TeaPoly](https://github.com/TeaPoly ) )
 
 
 ## Requirements
