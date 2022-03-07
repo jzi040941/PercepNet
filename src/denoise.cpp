@@ -38,7 +38,7 @@
 #define NB_DELTA_CEPS 6
 
 #define NB_FEATURES (NB_BANDS*2+2)
-#define NORM_RATIO 32768
+#define NORM_RATIO 1
 
 #define ENVELOPE_POSTFILTERING_BETA 0.02f
 
@@ -118,7 +118,7 @@ void compute_band_energy(float *bandE, const kiss_fft_cpx *X) {
   sum[NB_BANDS-1] *= 2;
   for (i=0;i<NB_BANDS;i++)
   {
-    bandE[i] = sqrt(sum[i]);
+    bandE[i] = sum[i];
   }
 }
 
@@ -735,8 +735,8 @@ int train(int argc, char **argv) {
     calc_ideal_gain(Ex, Ey, g);
     compute_band_corr(Eyp, Y, P);
     for (i=0;i<NB_BANDS;i++) Eyp[i] = fmin(1,fmax(0,Eyp[i]/sqrt(.001+Ey[i]*Ep[i])));
-    estimate_phat_corr(common, Eyp, Ephatp);
-    filter_strength_calc(Exp, Eyp, Ephatp, r);
+    estimate_phat_corr(common, Ephaty, Ephatp);
+    filter_strength_calc(Exp, Ephaty, Ephatp, r);
     adjust_gain_strength_by_condition(common, Ephatp, Exp, g, r);
     
     #ifdef TEST
