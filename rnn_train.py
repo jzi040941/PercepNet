@@ -108,9 +108,9 @@ class PercepNet(nn.Module):
         #self.hidden_dim = hidden_dim
         #self.n_layers = n_layers
         
-        self.fc = nn.Sequential(nn.Linear(input_dim, 128), nn.Sigmoid())
-        self.conv1 = nn.Sequential(nn.Conv1d(128, 512, 5, stride=1, padding=4), nn.Sigmoid())#padding for align with c++ dnn
-        self.conv2 = nn.Sequential(nn.Conv1d(512, 512, 3, stride=1, padding=2), nn.Sigmoid())
+        self.fc = nn.Sequential(nn.Linear(input_dim, 128), nn.ReLU())
+        self.conv1 = nn.Sequential(nn.Conv1d(128, 512, 5, stride=1, padding=4), nn.ReLU())#padding for align with c++ dnn
+        self.conv2 = nn.Sequential(nn.Conv1d(512, 512, 3, stride=1, padding=2), nn.Tanh())
         #self.gru = nn.GRU(512, 512, 3, batch_first=True)
         self.gru1 = nn.GRU(512, 512, 1, batch_first=True)
         self.gru2 = nn.GRU(512, 512, 1, batch_first=True)
