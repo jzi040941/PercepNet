@@ -146,3 +146,9 @@ src/*.pcm
 
 #binary folder
 bin/
+
+#dataset folder
+sampledata/
+test_input.pcm
+test_output.pcm
+test.output
