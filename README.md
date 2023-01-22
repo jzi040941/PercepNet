@@ -20,7 +20,14 @@ https://www.researchgate.net/publication/343568932_A_Perceptually-Motivated_Appr
  - Sox
  - Python>=3.6
  - Pytorch
- 
+
+## Prepare sampledata
+1. download and sythesize data DNS-Challenge 2020 Dataset before excute utils/run.sh for training. 
+```shell
+git clone -b interspeech2020/master  https://github.com/microsoft/DNS-Challenge.git
+```
+2. Follow the Usage instruction in DNS Challenge repo(https://github.com/microsoft/DNS-Challenge) at interspeech2020/master branch. please modify save directories at DNS-Challenge/noisyspeech_synthesizer.cfg sampledata/speech and sampledata/noise each.
+
 ## Build & Training
 This repository is tested on Ubuntu 20.04(WSL2)
 
@@ -38,7 +45,7 @@ cd ..
 
 3. feature generation for training with sampleData
 ```
-bin/src/percepNet sampledata/speech/speech.pcm sampledata/noise/noise20db.raw 4000 test.output
+bin/src/percepNet sampledata/speech/speech.pcm sampledata/noise/noise.pcm 4000 test.output
 ```
 
 4. Convert output binary to h5
@@ -47,8 +54,10 @@ python3 utils/bin2h5.py test.output training.h5
 ```
 
 5. Training
-```
-python3 rnn_train.py
+run utils/run.sh
+```shell
+cd utils
+./run.sh
 ```
 
 6. Dump weight from pytorch to c++ header
@@ -65,11 +74,7 @@ cd ..
 bin/src/percepNet_run test_input.pcm percepnet_output.pcm
 ```
 
-## SampleData
 
-clean speech - VCTK 48k wav https://datashare.is.ed.ac.uk/handle/10283/2791 (clean_train_set)
-
-noise data - DEMAND 48k wav https://zenodo.org/record/1227121#__sid=js0 (*.48k.zip)
 
 ## Acknowledgements
 [@jasdasdf]( https://github.com/jasdasdf ), [@sTarAnna]( https://github.com/sTarAnna ), [@cookcodes]( https://github.com/cookcodes ), [@xyx361100238]( https://github.com/xyx361100238 ), [@zhangyutf]( https://github.com/zhangyutf ), [@TeaPoly](https://github.com/TeaPoly ), [@rameshkunasi]( https://github.com/rameshkunasi ),  [@OscarLiau]( https://github.com/OscarLiau ), [@YangangCao]( https://github.com/YangangCao ), [Jaeyoung Yang]( https://www.linkedin.com/in/jaeyoung-yang-354b21146 )
