@@ -152,3 +152,6 @@ sampledata/
 test_input.pcm
 test_output.pcm
 test.output
+training_set_sept12_500h
+sampledata_vctk_DEMAND
+training.h5
