@@ -66,13 +66,17 @@ bin/src/percepNet_run test_input.pcm percepnet_output.pcm
 ```
 
 ## SampleData
-download and sythesize data DNS-Challenge 2020 Dataset before excute utils/run.sh for training. 
+1. download and sythesize data DNS-Challenge 2020 Dataset before excute utils/run.sh for training. 
 ```shell
 git clone -b interspeech2020/master  https://github.com/microsoft/DNS-Challenge.git
 ```
-Follow the Usage instruction in DNS Challenge repo(https://github.com/microsoft/DNS-Challenge) at interspeech2020/master branch.
+2. Follow the Usage instruction in DNS Challenge repo(https://github.com/microsoft/DNS-Challenge) at interspeech2020/master branch. please modify save directories at DNS-Challenge/noisyspeech_synthesizer.cfg sampledata/speech and sampledata/noise each.
 
-modify save dir at DNS-Challenge/noisyspeech_synthesizer.cfg sampledata/speech and sampledata/noise each.
+3. run utils/run.sh
+```shell
+cd utils
+./run.sh
+```
 
 ## Acknowledgements
 [@jasdasdf]( https://github.com/jasdasdf ), [@sTarAnna]( https://github.com/sTarAnna ), [@cookcodes]( https://github.com/cookcodes ), [@xyx361100238]( https://github.com/xyx361100238 ), [@zhangyutf]( https://github.com/zhangyutf ), [@TeaPoly](https://github.com/TeaPoly ), [@rameshkunasi]( https://github.com/rameshkunasi ),  [@OscarLiau]( https://github.com/OscarLiau ), [@YangangCao]( https://github.com/YangangCao ), [Jaeyoung Yang]( https://www.linkedin.com/in/jaeyoung-yang-354b21146 )
