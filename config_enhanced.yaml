@@ -1,0 +1,50 @@
+# PercepNet Enhanced Training Configuration
+# Save this as config.yaml and use with: python rnn_train_with_diagnostics.py --config config.yaml
+
+# Training parameters
+batch_size: 10
+learning_rate: 0.0001
+train_max_steps: 100000
+num_workers: 4
+
+# Loss function parameters (enhanced stability)
+loss_gamma: 0.5
+loss_C4: 10.0
+loss_eps: 1e-8        # Small epsilon for numerical stability
+clamp_predictions: true   # Clamp predictions to [eps, 1-eps]
+
+# Logging intervals
+log_interval_steps: 100        # Basic training metrics every 100 steps
+eval_interval_steps: 1000      # Full evaluation every 1000 steps  
+save_interval_steps: 5000      # Save checkpoint every 5000 steps
+diagnostic_interval_steps: 2000  # Detailed diagnostics every 2000 steps
+ablation_interval_steps: 10000   # Periodic ablation every 10000 steps
+
+# Gradient monitoring and clipping
+gradient_clip_threshold: 10.0  # Alert threshold for gradient monitoring
+gradient_clip_value: 1.0       # Clip gradients above this value
+clip_gradients: true           # Enable gradient clipping
+
+# W&B configuration
+use_wandb: true
+wandb_project: "percepnet-enhanced"
+wandb_run_name: null  # Auto-generate if null
+wandb_notes: "Enhanced PercepNet training with diagnostic monitoring"
+wandb_watch_freq: 1000  # Model watching frequency
+
+# Diagnostic features
+run_initial_ablation: true      # Run ablation study at start
+enable_periodic_ablation: true  # Enable periodic ablation studies
+
+# Ablation study parameters
+ablation_gammas: [0.3, 0.5, 0.7]
+ablation_C4s: [1.0, 10.0, 50.0]  
+ablation_eps: [0.0, 1e-8, 1e-6]
+
+# Output directory (will be created if it doesn't exist)
+out_dir: "./experiments"
+
+# Additional monitoring
+monitor_nan_loss: true
+monitor_gradient_health: true
+save_diagnostic_history: true

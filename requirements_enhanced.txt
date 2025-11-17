@@ -1,0 +1,21 @@
+# PercepNet Enhanced Training Requirements
+# Install with: pip install -r requirements_enhanced.txt
+
+# Original dependencies
+librosa
+numpy
+torch
+tensorboardX
+matplotlib
+h5py
+pyyaml
+tqdm
+
+# Enhanced training dependencies
+wandb              # Weights & Biases for experiment tracking
+Pillow            # Image processing for visualizations
+torchvision       # For ToTensor transform
+
+# Optional performance dependencies
+psutil            # System monitoring
+gputil            # GPU monitoring

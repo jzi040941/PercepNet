@@ -1,0 +1,6 @@
+require_approval_for:
+  - shell
+  - patch
+summarize_from_comments_only: true
+search_mode: literal
+max_search_hits: 50
